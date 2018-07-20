@@ -1,192 +1,221 @@
 <!DOCTYPE html>
 <head>
-  <meta charset="utf-8">
-  <script src="https://d3js.org/d3.v4.min.js"></script>
-  <style>
-    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
-  </style>
+    <meta charset="utf-8">
+    <script src="d3.v4.min.js"></script>
+    <style>
+        body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+    </style>
 </head>
 
 <body>
-  <button onclick="togglePlay();">Play/Pause</button>
-  <script>
-    var TAU = 6.283;
-    
-    var svg_width = 600;
-    var svg_height = 600;
-    
-    var body = d3.select("body");
-    var svg = body.append("svg")
-      .attr("width", svg_width)
-      .attr("height",svg_height);
+    <button onclick="togglePlay();">Play/Pause</button>
+    <script>
+        var TAU = 6.283;
+        
+        var svg_width = 600;
+        var svg_height = 600;
+        
+        var body = d3.select("body");
+        var svg = body.append("svg")
+            .attr("width", svg_width)
+            .attr("height",svg_height);
 
-    var nb_bodies = 3;
-    var body_radii = [30, 10, 5];
-    var body_colors = ['yellow', 'green', 'red'];
-    var orbital_radii = [0, 150, 75];
-    var orbital_periods = [1000, 13000, 2000];
+        var nb_bodies = 5;
+        var body_radii = [30, 20, 15, 10, 5];
+        var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
+        var orbital_radii = [0, 100, 75, 50, 20];
+        var orbital_periods = [1000, 13000, 5000, 2000, 1500];
 
-    var heavenly_bodies = [];
-    var cx = svg_width/2;
-    var cy = svg_height/2;
-    for (var i = 0; i < nb_bodies; i++) {
-      cx += orbital_radii[i];
-      var new_body = svg.append("circle")
-      .attr("cx", cx)
-      .attr("cy", cy)
-      .attr("r", body_radii[i])
-      .attr("fill", body_colors[i])
-      .attr("stroke", "black");
-      heavenly_bodies.push(new_body);
-    }
+        var heavenly_bodies = [];
+        var cx = svg_width/2;
+        var cy = svg_height/2;
+        for (var i = 0; i < nb_bodies; i++) {
+              cx += orbital_radii[i];
+              var new_body = svg.append("circle")
+              .attr("cx", cx)
+              .attr("cy", cy)
+              .attr("r", body_radii[i])
+              .attr("fill", body_colors[i])
+              .attr("stroke", "black");
+              heavenly_bodies.push(new_body);
+        }
 
     var orbits = [];
     for (var i = 0; i < nb_bodies; i++) {
-      var new_orbit = svg.append("path")
-          .attr("fill", "none")
-          .attr("stroke", "black");
-      orbits.push(new_orbit);
+        var new_orbit = svg.append("path")
+            .attr("fill", "none")
+            .attr("stroke", "black");
+        orbits.push(new_orbit);
     }
     
-
-    // var moon_epicycle = svg.append("circle")
-    //   .attr("cx", +planet.attr('cx'))
-    //   .attr("cy", +planet.attr('cy'))
-    //   .attr("r", moon_orbital_radius)
-    //   .attr("fill", "none")
-    //   .attr("stroke", "black");
 
     var traces = [];
     var trace_arrays = [];
     for (var i = 0; i < nb_bodies; i++) {
-      traces[i] = svg.append("g");
-      trace_arrays[i] = [];
+        traces[i] = svg.append("g");
+        trace_arrays[i] = [];
     }
     
 
-    var showTraces = true;
-    var showOrbits = true;
-    var play = false;
-    var timer = d3.timer(orbit)
-      .stop();
+    var shouldDrawTraces = [false, false, false, false, false];
+    var shouldDrawOrbits = [false, false, false, false, true];
+    var shouldPlay = false;
+    var timer = d3.timer(playOrbit)
+        .stop();
+    
+    var traceSpacing = 5;
+    var traceSpacingCounter = 0;
 
     function togglePlay() {
-      play = !play;
-      if (play) {
-        timer = d3.timer(orbit)
-      } else {
-        timer.stop();
-      }
+        shouldPlay = !shouldPlay;
+        if (shouldPlay) {
+            timer = d3.timer(playOrbit)
+        } else {
+            timer.stop();
+        }
     }
 
-    function orbit(t) {
+    function playOrbit(t) {
       
-      x = svg_width/2;
-      y = svg_height/2;
-      for (var i = 0; i < nb_bodies; i++) {
-        var angle = t/orbital_periods[i] * TAU;
-        x += orbital_radii[i] * Math.cos(angle);
-        y -= orbital_radii[i] * Math.sin(angle);
-        heavenly_bodies[i].attr("cx", x)
-          .attr("cy", y)
-          .raise();
+        x = svg_width/2;
+        y = svg_height/2;
 
-      if (showTraces) {
-        var tracePoint = d3.select("svg")
-        .select("g")
-        .append("circle")
-        .attr("cx", x)
-        .attr("cy", y)
-        .attr("r", 1)
-        .attr("fill", "black");
-        
-        trace_arrays[i].push(tracePoint);
-        
-        if (traces[i].length > 20) {
-          trace_arrays[i][0].remove();
-          trace_arrays[i].shift();
+        for (var i = 0; i < nb_bodies; i++) {
+
+            var angle = t/orbital_periods[i] * TAU;
+            x += orbital_radii[i] * Math.cos(angle);
+            y -= orbital_radii[i] * Math.sin(angle);
+            heavenly_bodies[i].attr("cx", x)
+            .attr("cy", y)
+            .raise();
+
+            if (shouldDrawTraces[i]) { updateTraceOfPlanet(i); }
+
         }
 
-      }
+    }
+
+
+    function updateTraceOfPlanet(i) {
+
+        traceSpacingCounter = (traceSpacingCounter + 1) % traceSpacing;
+
+        if (traceSpacingCounter != 0) { return; }
+
+        var tracePoint = d3.select("svg")
+            .select("g")
+            .append("circle")
+            .attr("cx", x)
+            .attr("cy", y)
+            .attr("r", 1)
+            .attr("fill", "black");
+            
+        trace_arrays[i].push(tracePoint);
+            
+        if (traces[i].length > 20) {
+            trace_arrays[i][0].remove();
+            trace_arrays[i].shift();
+        }
 
     }
 
-      
-      	
-      // moon_epicycle.attr("cx", x)
-      //   .attr("cy", y)
-      //   .raise();
-
-    }
-    
-
-    
-    if (showOrbits) { drawOrbits(); }
 
     function drawOrbits() {
+        for (var i = 0; i < nb_bodies; i++) {
+            if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i); }
+        }
+    }
 
-      for (var i = 0; i < nb_bodies; i++) {
+    function drawOrbitForPlanet(i) {
+
         T = orbital_periods[i];
         R = orbital_radii[i];
-        dt = 0.002 * T;
-        start_x = svg_width/2;
-        start_y = svg_height/2;
-        for (var j = 0; j < nb_bodies; j++) {
-          start_x += orbital_radii[j];
+        dt = 0.02 * T;
+        start_x = +heavenly_bodies[0].attr('cx');
+        start_y = +heavenly_bodies[0].attr('cy');
+        for (var j = 0; j <= i; j++) {
+            start_x += orbital_radii[j];
         }
         orbit_path_string = "M" + start_x;
         orbit_path_string += " " + start_y;
-      
-      for (var t = 0; t <= 10*orbital_periods[i]; t += dt) {
-        var x = svg_width/2;
-        var y = svg_height/2;
-        for (var j = 1; j <= i; j++) {
-          var angle = t/T * TAU;
-      	 x += orbital_radii[j] * Math.cos(angle);
-      	 y -= orbital_radii[j] * Math.sin(angle);
-        }
-        orbit_path_string += "L" + x + " " + y;
         
-      }
-      
-      
-      orbits[i].attr("d", orbit_path_string);
-      
-      }
+        var t = 0;
+        var x0 = 0;
+        var y0 = 0;
+        for (var j = 0; j <= i; j++) {
+            x0 += heavenly_bodies[j].attr('cx');
+            y0 += heavenly_bodies[j].attr('cy');
+        }
+        var x = Infinity;
+        var y = Infinity;
+        var counter = 0;
+
+        while (Math.abs(x - x0) + Math.abs(y - y0) > 10 && counter < 1000) {
+            counter += 1;
+            console.log("bla");
+            x = +heavenly_bodies[0].attr('cx');
+            y = +heavenly_bodies[0].attr('cy');
+            for (var j = 1; j <= i; j++) {
+                var angle = t/orbital_periods[j] * TAU;
+                x += orbital_radii[j] * Math.cos(angle);
+                y -= orbital_radii[j] * Math.sin(angle);
+            }
+            orbit_path_string += "L" + x + " " + y;
+            t += dt;
+        }
+        orbits[i].remove();
+        orbits[i] = svg.append('path')
+            .attr("d", orbit_path_string)
+            .attr("fill", "none")
+            .attr("stroke", "black");
+        
+        
     }
 
-    // var dragHandler = d3.drag().on("drag", function() {
-    //   dx = d3.event.x - d3.select(this).attr('cx');
-    //   dy = d3.event.y - d3.select(this).attr('cy');
-    //   d3.select(this)
-    //     .attr("cx", d3.event.x)
-    //     .attr("cy", d3.event.y);
+    var dragHandler = d3.drag().on("drag", function() {
       
-    //   var ii = heavenly_bodies.length;
-    //   for (var i = 0; i < heavenly_bodies.length; i++) {
-    //     var b = d3.select(this);
-    //     console.log(b);
-    //     console.log(heavenly_bodies[i]);
-    //     if (heavenly_bodies[i] === b) {
-    //       ii = i;
-    //     } else if (i > ii) {
-    //       heavenly_bodies[i].attr('transform', 'translate(' + dx + ',' + dy + ')');
-          
-    //     }
-    //   }
-    //   //orbital_radius = ((+sun.attr('cx') - planet.attr('cx'))**2 
-    //   //   + (+sun.attr('cy') - planet.attr('cy'))**2) ** 0.5;
-    //   //moon_orbital_radius = ((+planet.attr('cx') - moon.attr('cx'))**2 
-    //   //   + (+planet.attr('cy') - moon.attr('cy'))**2) ** 0.5;
+        dx = d3.event.x - d3.select(this).attr('cx');
+        dy = d3.event.y - d3.select(this).attr('cy');
+
+      
+        var ii;
+        for (var i = 0; i < heavenly_bodies.length; i++) {
+            var b = d3.select(this);
+            if (heavenly_bodies[i].attr('cx') == b.attr('cx')) {
+                ii = i;
+                recalculateOrbitalRadiusForPlanet(ii);
+            }
+            if (i >= ii) {
+                planet = heavenly_bodies[i];
+                old_cx = +planet.attr('cx');
+                old_cy = +planet.attr('cy');
+                planet.attr('cx', old_cx + dx);
+                planet.attr('cy', old_cy + dy);
+            }
+
+        }
+        drawOrbits();
+
+      //orbital_radius = ((+sun.attr('cx') - planet.attr('cx'))**2 
+      //   + (+sun.attr('cy') - planet.attr('cy'))**2) ** 0.5;
+      //moon_orbital_radius = ((+planet.attr('cx') - moon.attr('cx'))**2 
+      //   + (+planet.attr('cy') - moon.attr('cy'))**2) ** 0.5;
         
-    //     drawOrbits();
 
-    // });
+    });
 
-    // dragHandler(d3.select("svg").selectAll("circle"));
+    dragHandler(d3.select("svg").selectAll("circle"));
     
     
-    
+    function recalculateOrbitalRadiusForPlanet(i) {
+        if (i == 0) { return; }
+        x1 = heavenly_bodies[i-1].attr('cx');
+        y1 = heavenly_bodies[i-1].attr('cy');
+        x2 = heavenly_bodies[i].attr('cx');
+        y2 = heavenly_bodies[i].attr('cy');
+        r = ((x1 - x2)**2 + (y1 - y2)**2)**0.5;
+        orbital_radii[i] = r;
+    }
     
     
     
@@ -204,6 +233,6 @@
     
     
 
-  </script>
+    </script>
 </body>
 
