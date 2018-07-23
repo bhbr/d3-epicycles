@@ -20,25 +20,39 @@
             .attr("width", svg_width)
             .attr("height",svg_height);
 
+
         var nb_bodies = 5;
         var body_radii = [30, 20, 15, 10, 5];
         var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
         var orbital_radii = [0, 100, 75, 50, 20];
+        var orbital_phases = [0*TAU, 0.3*TAU, -0.2*TAU,0.45*TAU, 0.75*TAU];
         var orbital_periods = [6000, 3000, 2000, 1500, 1200];
 
-        var heavenly_bodies = [];
+        var data = [];
         var cx = svg_width/2;
         var cy = svg_height/2;
         for (var i = 0; i < nb_bodies; i++) {
-              cx += orbital_radii[i];
-              var new_body = svg.append("circle")
-              .attr("cx", cx)
-              .attr("cy", cy)
-              .attr("r", body_radii[i])
-              .attr("fill", body_colors[i])
-              .attr("stroke", "black");
-              heavenly_bodies.push(new_body);
+            data.push({
+                'cx': cx,
+                'cy': cy,
+                'body_radius': body_radii[i],
+                'body_color': body_colors[i],
+            })
+            cx += orbital_radii[i+1] * Math.cos(orbital_phases[i+1]);
+            cy += orbital_radii[i+1] * Math.sin(orbital_phases[i+1]);
         }
+
+        heavenly_bodies = [];
+        svg.data(data)
+            .enter()
+            .append("circle")
+            .attr("cx", d => d['cx'])
+            .attr("cy", d => d['cy'])
+            .attr("r", d => d['body_radius'])
+            .attr("fill", d => d['body_color'])
+            .attr("stroke", "black");
+        heavenly_bodies.push(new_body);
+        
 
     var orbits = [];
     for (var i = 0; i < nb_bodies; i++) {
@@ -75,6 +89,7 @@
         } else {
             timer.stop();
             timestamp += addedTime;
+            updateData();
         }
     }
 
@@ -88,7 +103,7 @@
 
         for (var i = 1; i < nb_bodies; i++) {
 
-            var angle = new_t/orbital_periods[i] * TAU;
+            var angle = new_t/orbital_periods[i] * TAU + orbital_phases[i];
             x += orbital_radii[i] * Math.cos(angle);
             y -= orbital_radii[i] * Math.sin(angle);
             heavenly_bodies[i]
@@ -100,7 +115,18 @@
 
         }
 
+    }
 
+    function updateData() {
+        for (var i = 0; i < nb_bodies; i++) {
+            data[i]['cx'] = heavenly_bodies[i]['cx'];
+            data[i]['cy'] = heavenly_bodies[i]['cy'];
+            if (i > 0) {
+                dx = data[i]['cx'] - data[i-1]['cx'];
+                dy = data[i]['cy'] - data[i-1]['cy'];
+                orbital_phases[i] = Math.atan(dy/dx);
+            }
+        }
     }
 
 
