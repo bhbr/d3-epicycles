@@ -10,213 +10,289 @@
 <body>
     <button onclick="togglePlay();">Play/Pause</button>
     <script>
-        var TAU = 6.283;
+
+        // CONSTANTS //
+
+        var TAU = 6.283185;
         
         var svg_width = 600;
         var svg_height = 600;
+
+        var nb_bodies = 5;
+        var body_radii = [30, 20, 15, 10, 5];
+        var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
+        var ids = body_colors;
+        var orbital_radii = [0, 100, 75, 50, 20];
+        var orbital_periods = [10000, 6000, 3000, 2000, 1400];
+        var orbital_phases = [0, 0.25 * TAU, 0.1 * TAU, -0.34 * TAU, 0.5 * TAU];
+
+        var shouldDrawTraces = [false, false, false, false, false];
+        var shouldDrawOrbits = [false, false, true, false, true];
+        
         
         var body = d3.select("body");
         var svg = body.append("svg")
             .attr("width", svg_width)
             .attr("height",svg_height);
 
-        var nb_bodies = 5;
-        var body_radii = [30, 20, 15, 10, 5];
-        var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
-        var orbital_radii = [0, 100, 75, 50, 20];
-        var orbital_periods = [6000, 3000, 2000, 1500, 1200];
+        // CREATING PLANETS IN SVG AND IN ARRAY //
 
         var heavenly_bodies = [];
         var cx = svg_width/2;
         var cy = svg_height/2;
         for (var i = 0; i < nb_bodies; i++) {
-              cx += orbital_radii[i];
+              cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
+              cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
               var new_body = svg.append("circle")
               .attr("cx", cx)
               .attr("cy", cy)
               .attr("r", body_radii[i])
               .attr("fill", body_colors[i])
+              .attr("id", ids[i])
               .attr("stroke", "black");
               heavenly_bodies.push(new_body);
         }
 
-    var orbits = [];
-    for (var i = 0; i < nb_bodies; i++) {
-        var new_orbit = svg.append("path")
-            .attr("fill", "none")
-            .attr("stroke", "black");
-        orbits.push(new_orbit);
-    }
-    
-
-    var traces = [];
-    var trace_arrays = [];
-    for (var i = 0; i < nb_bodies; i++) {
-        traces[i] = svg.append("g");
-        trace_arrays[i] = [];
-    }
-    
-
-    var shouldDrawTraces = [false, false, false, false, false];
-    var shouldDrawOrbits = [false, false, false, false, true];
-    var shouldPlay = false;
-    var timestamp = 0;
-    var addedTime = 0;
-    var timer = d3.timer(playOrbit)
-        .stop();
-    
-    var traceSpacing = 5;
-    var traceSpacingCounter = 0;
-
-    function togglePlay() {
-        shouldPlay = !shouldPlay;
-        if (shouldPlay) {
-            timer = d3.timer(playOrbit)
-        } else {
-            timer.stop();
-            timestamp += addedTime;
+        // INSTANTIATING FORWARD AND BACK ORBITS //
+        // again in svg and in an array
+        var fwd_orbits = [];
+        for (var i = 0; i < nb_bodies; i++) {
+            var new_orbit = svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "none");
+            fwd_orbits.push(new_orbit);
         }
-    }
+        var back_orbits = [];
+        for (var i = 0; i < nb_bodies; i++) {
+            var new_orbit = svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "black");
+            back_orbits.push(new_orbit);
+        }
 
-    function playOrbit(t) {
+        // EPICYCLE CIRCLES //
+        var epicycles = [];
+        for (var i = 1; i< nb_bodies; i++) {
+            var new_epicycle = svg.append("circle")
+                .attr("cx", heavenly_bodies[i-1].attr("cx"))
+                .attr("cy", heavenly_bodies[i-1].attr("cy"))
+                .attr("r", orbital_radii[i])
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("opacity", 0.3);
+            epicycles.push(new_epicycle);
+        }
+        
+        // TRACES (TAILS) //
+        var traces = [];
+        var trace_arrays = [];
+        for (var i = 0; i < nb_bodies; i++) {
+            traces[i] = svg.append("g");
+            trace_arrays[i] = [];
+        }
+        var traceSpacing = 5;
+        var traceSpacingCounter = 0;
+        
+        // CREATING TIMER //
+        var timestamp = 0;
+        var addedTime = 0; // time shift incremented whenever stopping
+        var timer = d3.timer(playOrbit)
+             .stop();
+        
+        var shouldPlay = false;
+        function togglePlay() {
+            shouldPlay = !shouldPlay;
+            if (shouldPlay) {
+                timer = d3.timer(playOrbit);
+            } else {
+                timer.stop();
+                timestamp += addedTime;
+                updateOrbitalData();
+            }
+        }
+        
+        function playOrbit(t) {
 
-        addedTime = t;
-        new_t = timestamp + t;
-      
-        var x = +heavenly_bodies[0].attr('cx');
-        var y = +heavenly_bodies[0].attr('cy');
+            addedTime = t;
+            updateEpicycles();
+          
+            var x = +heavenly_bodies[0].attr('cx');
+            var y = +heavenly_bodies[0].attr('cy');
 
-        for (var i = 1; i < nb_bodies; i++) {
+            for (var i = 1; i < nb_bodies; i++) {
 
-            var angle = new_t/orbital_periods[i] * TAU;
-            x += orbital_radii[i] * Math.cos(angle);
-            y -= orbital_radii[i] * Math.sin(angle);
-            heavenly_bodies[i]
+                var angle = t/orbital_periods[i] * TAU + orbital_phases[i];
+                x += orbital_radii[i] * Math.cos(angle);
+                y -= orbital_radii[i] * Math.sin(angle);
+                heavenly_bodies[i]
+                    .attr("cx", x)
+                    .attr("cy", y)
+                    .raise();
+
+                if (shouldDrawTraces[i]) { updateTraceOfPlanet(i); }
+                if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i,t); }
+
+            }
+
+        }
+
+        function updateEpicycles() {
+
+            var x = +heavenly_bodies[0].attr('cx');
+            var y = +heavenly_bodies[0].attr('cy');
+
+            for (var i = 1; i < nb_bodies; i++) {
+                epicycles[i - 1]
+                    .attr("cx", x)
+                    .attr("cy", y)
+                    .attr("r", orbital_radii[i])
+                    .raise();
+                var angle = (addedTime)/orbital_periods[i] * TAU + orbital_phases[i];
+                x += orbital_radii[i] * Math.cos(angle);
+                y -= orbital_radii[i] * Math.sin(angle);
+
+            }
+        }
+
+        function updateOrbitalDataForPlanet(i) {
+            var ddx = +heavenly_bodies[i].attr('cx') - heavenly_bodies[i-1].attr('cx');
+            var ddy = +heavenly_bodies[i].attr('cy') - heavenly_bodies[i-1].attr('cy');
+            r = (ddx**2 + ddy**2) ** 0.5;
+            phi = Math.atan2(-ddy, ddx);
+            orbital_radii[i] = r;
+            orbital_phases[i] = phi;
+        }
+
+        function updateOrbitalData() {
+            for (var i = 1; i < nb_bodies; i++) {
+                updateOrbitalDataForPlanet(i);
+            }
+        }
+
+        function updateTraceOfPlanet(i) {
+
+            traceSpacingCounter = (traceSpacingCounter + 1) % traceSpacing;
+
+            if (traceSpacingCounter != 0) { return; }
+
+            var tracePoint = d3.select("svg")
+                .select("g")
+                .append("circle")
                 .attr("cx", x)
                 .attr("cy", y)
-                .raise();
-
-            if (shouldDrawTraces[i]) { updateTraceOfPlanet(i); }
+                .attr("r", 1)
+                .attr("fill", "black");
+                
+            trace_arrays[i].push(tracePoint);
+                
+            if (traces[i].length > 20) {
+                trace_arrays[i][0].remove();
+                trace_arrays[i].shift();
+            }
 
         }
 
+        drawOrbits(timestamp);
 
-    }
+        function drawOrbits(tt) {
+            for (var i = 0; i < nb_bodies; i++) {
+                if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i, tt); }
+            }
+        }
 
+        function drawOrbitForPlanet(i, tt) {
 
-    function updateTraceOfPlanet(i) {
-
-        traceSpacingCounter = (traceSpacingCounter + 1) % traceSpacing;
-
-        if (traceSpacingCounter != 0) { return; }
-
-        var tracePoint = d3.select("svg")
-            .select("g")
-            .append("circle")
-            .attr("cx", x)
-            .attr("cy", y)
-            .attr("r", 1)
-            .attr("fill", "black");
+            T = orbital_periods[i];
+            R = orbital_radii[i];
+            dt = 0.02 * T;
             
-        trace_arrays[i].push(tracePoint);
-            
-        if (traces[i].length > 20) {
-            trace_arrays[i][0].remove();
-            trace_arrays[i].shift();
+            var fwd_t = +tt;
+            var back_t = +tt;
+            var start_x = +heavenly_bodies[i].attr('cx');
+            var start_y = +heavenly_bodies[i].attr('cy');
+            var x0 = +heavenly_bodies[0].attr('cx');
+            var y0 = +heavenly_bodies[0].attr('cy');
+            var fwd_x = Infinity;
+            var fwd_y = Infinity;
+            var back_x = Infinity;
+            var back_y = Infinity;
+            var counter = 0;
+
+            fwd_orbit_path_string = "M" + start_x + " " + start_y;
+            back_orbit_path_string = fwd_orbit_path_string;
+
+            // while (Math.abs(fwd_x - start_x) + Math.abs(fwd_y - start_y) > 1 && counter < 200) {
+            while (counter < 200) {
+                fwd_t += dt;
+                back_t -= dt;
+                counter += 1;
+                fwd_x = x0;
+                fwd_y = y0;
+                back_x = x0;
+                back_y = y0;
+                for (var j = 1; j <= i; j++) {
+                    var fwd_angle = fwd_t/orbital_periods[j] * TAU;
+                    var back_angle = back_t/orbital_periods[j] * TAU;
+                    var r = +orbital_radii[j];
+                    var phi = +orbital_phases[j];
+                    fwd_x += r * Math.cos(fwd_angle + phi);
+                    fwd_y -= r * Math.sin(fwd_angle + phi);
+                    back_x += r * Math.cos(back_angle + phi);
+                    back_y -= r * Math.sin(back_angle + phi);
+                }
+                fwd_orbit_path_string += "L" + fwd_x + " " + fwd_y;
+                back_orbit_path_string += "L" + back_x + " " + back_y;
+            }
+
+            fwd_orbits[i].remove();
+            fwd_orbits[i] = svg.append('path')
+                .attr("d", fwd_orbit_path_string)
+                .attr("fill", "none")
+                .attr("stroke", "none"); 
+
+            back_orbits[i].remove();
+            back_orbits[i] = svg.append('path')
+                .attr("d", back_orbit_path_string)
+                .attr("fill", "none")
+                .attr("stroke", "black");   
         }
 
-    }
 
-    drawOrbits();
 
-    function drawOrbits() {
-        for (var i = 0; i < nb_bodies; i++) {
-            if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i); }
-        }
-    }
+        var dragHandler = d3.drag().on("drag", function() {
 
-    function drawOrbitForPlanet(i) {
+            addedTime = 0;
+          
+            dx = d3.event.x - d3.select(this).attr('cx');
+            dy = d3.event.y - d3.select(this).attr('cy');
+          
+            var ii;
+            var b = d3.select(this); // the planet registering the drag
+            for (var i = 0; i < heavenly_bodies.length; i++) {
+                if (heavenly_bodies[i].attr('id') == b.attr('id')) {
+                    ii = i;
+                    if (i != 0) {
+                        updateOrbitalDataForPlanet(ii);
+                    }
+                }
+                if (i >= ii) {
+                    planet = heavenly_bodies[i];
+                    old_cx = +planet.attr('cx');
+                    old_cy = +planet.attr('cy');
+                    planet.attr('cx', old_cx + dx);
+                    planet.attr('cy', old_cy + dy);
+                }
+                if (i != 0) {
+                    updateOrbitalDataForPlanet(i);
+                }
+            }
+            drawOrbits(0);
+            updateEpicycles();
 
-        T = orbital_periods[i];
-        R = orbital_radii[i];
-        dt = 0.02 * T;
-        start_x = +heavenly_bodies[0].attr('cx');
-        start_y = +heavenly_bodies[0].attr('cy');
-        for (var j = 0; j <= i; j++) {
-            start_x += orbital_radii[j];
-        }
-        orbit_path_string = "M" + start_x;
-        orbit_path_string += " " + start_y;
+        });
+
+        dragHandler(d3.select("svg").selectAll("circle"));
         
-        var t = 0;
-        var x0 = heavenly_bodies[i].attr('cx');
-        var y0 = heavenly_bodies[i].attr('cy');
-        var x = Infinity;
-        var y = Infinity;
-        var counter = 0;
-
-        while (Math.abs(x - x0) + Math.abs(y - y0) > 1 && counter < 1000) {
-            t += dt;
-            counter += 1;
-            x = +heavenly_bodies[0].attr('cx');
-            y = +heavenly_bodies[0].attr('cy');
-            for (var j = 1; j <= i; j++) {
-                var angle = t/orbital_periods[j] * TAU;
-                x += orbital_radii[j] * Math.cos(angle);
-                y -= orbital_radii[j] * Math.sin(angle);
-            }
-            orbit_path_string += "L" + x + " " + y;
-        }
-
-        orbits[i].remove();
-        orbits[i] = svg.append('path')
-            .attr("d", orbit_path_string)
-            .attr("fill", "none")
-            .attr("stroke", "black");
-
-        console.log(orbits[i]);    
-    }
-
-    var dragHandler = d3.drag().on("drag", function() {
-      
-        dx = d3.event.x - d3.select(this).attr('cx');
-        dy = d3.event.y - d3.select(this).attr('cy');
-
-      
-        var ii;
-        for (var i = 0; i < heavenly_bodies.length; i++) {
-            var b = d3.select(this);
-            if (heavenly_bodies[i].attr('cx') == b.attr('cx') && heavenly_bodies[i].attr('cy') == b.attr('cy')) {
-                ii = i;
-                recalculateOrbitalRadiusForPlanet(ii);
-            }
-            if (i >= ii) {
-                planet = heavenly_bodies[i];
-                old_cx = +planet.attr('cx');
-                old_cy = +planet.attr('cy');
-                planet.attr('cx', old_cx + dx);
-                planet.attr('cy', old_cy + dy);
-            }
-
-        }
-        drawOrbits();
-
-    });
-
-    dragHandler(d3.select("svg").selectAll("circle"));
-    
-    
-    function recalculateOrbitalRadiusForPlanet(i) {
-        if (i == 0) { return; }
-        x1 = heavenly_bodies[i-1].attr('cx');
-        y1 = heavenly_bodies[i-1].attr('cy');
-        x2 = heavenly_bodies[i].attr('cx');
-        y2 = heavenly_bodies[i].attr('cy');
-        r = ((x1 - x2)**2 + (y1 - y2)**2)**0.5;
-        orbital_radii[i] = r;
-    }
-    
-    
     
     
     
