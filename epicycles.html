@@ -4,12 +4,48 @@
     <script src="d3.v4.min.js"></script>
     <style>
         body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
-        text { cursor: default; }
+        svg text {
+            -webkit-user-select: none;
+            -webkit-moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            cursor: default; 
+        }
+        svg text::selection {
+            background: none;
+        }
+
     </style>
 </head>
 
 <body>
     <script>
+
+        function linspace(xmin,xmax,n) {
+            if (n < 1) {
+                return [];
+            } else if (n == 1) {
+                return [(xmin + xmax)/2];
+            }
+            else {
+                dx = (xmax - xmin)/(n-1);
+                var retarr = [xmin];
+                for (var i = 1; i < n; i++) {
+                    retarr.push(xmin + i * dx);
+                }
+                return retarr;
+            }
+        }
+
+        function colorwheel(n) {
+            var nb_copies = Math.ceil(n/5);
+            var retarr = [];
+            for (var i = 0; i < nb_copies; i++) {
+                retarr = retarr.concat(['yellow', 'green', 'red', 'cyan', 'gray']);
+            }
+            return retarr.slice(0,n);
+        }
+
 
         // CONSTANTS //
 
@@ -18,28 +54,72 @@
         var svg_width = 550;
         var svg_height = 550;
 
-        var nb_bodies = 5;
-        var body_radii = [30, 25, 20, 15, 10];
-        var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
-        var ids = body_colors;
-        var orbital_radii = [0, 100, 75, 50, 20];
+        var nb_bodies = 7;
         var global_period = 6000;
 
-        var orbital_frequencies = [1, 1, 2, 3, 4];
-        var orbital_periods = [];
-        for (var i = 0; i < nb_bodies; i++) {
-            orbital_periods.push(global_period/orbital_frequencies[i]);
-        }
-        var orbital_phases = [0, 0.25 * TAU, 0.1 * TAU, -0.34 * TAU, 0.5 * TAU];
+        var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTraces, shouldDrawOrbits, fwd_orbits, back_orbits;
 
-        var shouldDrawTraces = [false, false, false, false, false];
-        var shouldDrawOrbits = [false, false, false, false, true];
-        
-        
+
         var body = d3.select("body");
         var svg = body.append("svg")
             .attr("width", svg_width)
             .attr("height",svg_height);
+
+
+        function clearOrbits() {
+            // INSTANTIATING FORWARD AND BACK ORBITS //
+            // again in svg and in an array
+            fwd_orbits = [];
+            for (var i = 0; i < nb_bodies; i++) {
+                var new_orbit = svg.append("path")
+                    .attr("fill", "none")
+                    .attr("stroke", "none");
+                fwd_orbits.push(new_orbit);
+            }
+            back_orbits = [];
+            for (var i = 0; i < nb_bodies; i++) {
+                var new_orbit = svg.append("path")
+                    .attr("fill", "none")
+                    .attr("stroke", "black");
+                back_orbits.push(new_orbit);
+            }
+        }
+
+        function setupPlanets(n) {
+            body_radii = linspace(30,10,nb_bodies);
+            body_colors = colorwheel(nb_bodies);
+            ids = body_radii;
+
+            shouldDrawTraces = [];
+            shouldDrawOrbits = [];
+            for (var i = 0; i < nb_bodies; i++) {
+                shouldDrawTraces.push(false);
+                shouldDrawOrbits.push(false);
+            }
+            shouldDrawOrbits[nb_bodies - 1] = true;
+
+        }
+        
+        function setupOrbits(n) {
+            
+            orbital_radii = linspace(100,20,nb_bodies);
+            orbital_radii[0] = 0;
+
+            orbital_frequencies = linspace(0,nb_bodies - 1, nb_bodies);
+            orbital_periods = [];
+            for (var i = 0; i < nb_bodies; i++) {
+                orbital_periods.push(global_period/orbital_frequencies[i]);
+            }
+            orbital_phases = [];
+            for (var i = 0; i < nb_bodies; i++) {
+                orbital_phases.push(Math.random() * TAU);
+            }
+
+        }
+        
+        setupPlanets(nb_bodies);
+        setupOrbits(nb_bodies);
+        clearOrbits();
 
         // CREATING PLANETS IN SVG AND IN ARRAY //
 
@@ -71,22 +151,6 @@
             planet_labels.push(new_label);
         }
 
-        // INSTANTIATING FORWARD AND BACK ORBITS //
-        // again in svg and in an array
-        var fwd_orbits = [];
-        for (var i = 0; i < nb_bodies; i++) {
-            var new_orbit = svg.append("path")
-                .attr("fill", "none")
-                .attr("stroke", "none");
-            fwd_orbits.push(new_orbit);
-        }
-        var back_orbits = [];
-        for (var i = 0; i < nb_bodies; i++) {
-            var new_orbit = svg.append("path")
-                .attr("fill", "none")
-                .attr("stroke", "black");
-            back_orbits.push(new_orbit);
-        }
 
         // EPICYCLE CIRCLES //
         var epicycles = [];
@@ -224,14 +288,15 @@
 
         function drawOrbitForPlanet(i, tt) {
 
-            f = Math.abs(orbital_frequencies[i]);
+            //f = Math.abs(orbital_frequencies[i]);
             R = orbital_radii[i];
-            var dt;
-            if (f != 0) {
-                dt = 0.005 * global_period/f;
-            } else {
-                dt = 0.005 * global_period;
-            }
+            nb_steps = 1000;
+            var dt = global_period/nb_steps;
+            // if (f != 0) {
+            //     dt = 0.005 * global_period/f;
+            // } else {
+            //     dt = 0.005 * global_period;
+            // }
             
             var fwd_t = +tt;
             var back_t = +tt;
@@ -248,7 +313,7 @@
             fwd_orbit_path_string = "M" + start_x + " " + start_y;
             back_orbit_path_string = fwd_orbit_path_string;
 
-            while (counter < 2000) {
+            while (counter < nb_steps) {
                 fwd_t += dt;
                 back_t -= dt;
                 counter += 1;
@@ -308,10 +373,12 @@
                     planet
                         .attr('cx', old_cx + dx)
                         .attr('cy', old_cy + dy);
-                    label = planet_labels[i-1];
-                    label
-                        .attr('x', old_cx + dx)
-                        .attr('y', old_cy + dy);
+                    if (i != 0) {
+                        label = planet_labels[i-1];
+                        label
+                            .attr('x', old_cx + dx)
+                            .attr('y', old_cy + dy);
+                    }
                 }
                 if (i != 0) {
                     updateOrbitalDataForPlanet(i);
@@ -349,7 +416,43 @@
 
     
     
-    
+    function addPlanet() {
+
+        if (shouldPlay) { return; }
+
+        nb_bodies++;
+        setupPlanets(nb_bodies);
+        clearOrbits();
+
+        for (var i = 0; i < nb_bodies - 1; i++) {
+            heavenly_bodies[i]
+                .attr("r", body_radii[i])
+                .attr("fill", body_colors[i])
+                .attr("id", ids[i]);
+        }
+        orbital_radii[nb_bodies - 1] = orbital_radii[nb_bodies - 2];
+        orbital_frequencies[nb_bodies - 1] = 0;
+        orbital_periods[nb_bodies - 1] = global_period/orbital_frequencies[nb_bodies - 1];
+        orbital_phases[nb_bodies - 1] = 0;
+
+        var cx = +heavenly_bodies[0].attr('cx');
+        var cy = +heavenly_bodies[0].attr('cy');
+        for (var i = 0; i < nb_bodies; i++) {
+            cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
+            cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
+        }
+        var new_body = svg.append("circle")
+            .attr("cx", cx)
+            .attr("cy", cy)
+            .attr("r", body_radii[nb_bodies - 1])
+            .attr("fill", body_colors[nb_bodies - 1])
+            .attr("id", ids[nb_bodies - 1])
+            .attr("stroke", "black");
+        heavenly_bodies.push(new_body);
+
+        drawOrbits(0);
+
+    }
     
     
     
@@ -364,6 +467,7 @@
     </script>
     <br/>   
     <button onclick="togglePlay();" id='play_button'>Play/Pause</button>
+    <button onclick="addPlanet();" id='add_planet_button'>Add Epicycle</button>
 
 </body>
 
