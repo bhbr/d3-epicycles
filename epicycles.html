@@ -4,30 +4,36 @@
     <script src="d3.v4.min.js"></script>
     <style>
         body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+        text { cursor: default; }
     </style>
 </head>
 
 <body>
-    <button onclick="togglePlay();">Play/Pause</button>
     <script>
 
         // CONSTANTS //
 
         var TAU = 6.283185;
         
-        var svg_width = 600;
-        var svg_height = 600;
+        var svg_width = 550;
+        var svg_height = 550;
 
         var nb_bodies = 5;
-        var body_radii = [30, 20, 15, 10, 5];
+        var body_radii = [30, 25, 20, 15, 10];
         var body_colors = ['yellow', 'green', 'red', 'blue', 'cyan'];
         var ids = body_colors;
         var orbital_radii = [0, 100, 75, 50, 20];
-        var orbital_periods = [10000, 6000, 3000, 2000, 1400];
+        var global_period = 6000;
+
+        var orbital_frequencies = [1, 1, 2, 3, 4];
+        var orbital_periods = [];
+        for (var i = 0; i < nb_bodies; i++) {
+            orbital_periods.push(global_period/orbital_frequencies[i]);
+        }
         var orbital_phases = [0, 0.25 * TAU, 0.1 * TAU, -0.34 * TAU, 0.5 * TAU];
 
         var shouldDrawTraces = [false, false, false, false, false];
-        var shouldDrawOrbits = [false, false, true, false, true];
+        var shouldDrawOrbits = [false, false, false, false, true];
         
         
         var body = d3.select("body");
@@ -51,6 +57,18 @@
               .attr("id", ids[i])
               .attr("stroke", "black");
               heavenly_bodies.push(new_body);
+        }
+
+        // PLANET LABELS //
+        var planet_labels = [];
+        for (var i = 1; i < nb_bodies; i++) {
+            new_label = svg.append("text")
+            .text(orbital_frequencies[i])
+            .attr('text-anchor', 'middle')
+            .attr('alignment-baseline', 'ideographic')
+            .attr('x', heavenly_bodies[i].attr('cx'))
+            .attr('y', heavenly_bodies[i].attr('cy'));
+            planet_labels.push(new_label);
         }
 
         // INSTANTIATING FORWARD AND BACK ORBITS //
@@ -128,6 +146,10 @@
                     .attr("cx", x)
                     .attr("cy", y)
                     .raise();
+                planet_labels[i-1]
+                    .attr('x', x)
+                    .attr('y', y)
+                    .raise();
 
                 if (shouldDrawTraces[i]) { updateTraceOfPlanet(i); }
                 if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i,t); }
@@ -202,9 +224,14 @@
 
         function drawOrbitForPlanet(i, tt) {
 
-            T = orbital_periods[i];
+            f = Math.abs(orbital_frequencies[i]);
             R = orbital_radii[i];
-            dt = 0.02 * T;
+            var dt;
+            if (f != 0) {
+                dt = 0.005 * global_period/f;
+            } else {
+                dt = 0.005 * global_period;
+            }
             
             var fwd_t = +tt;
             var back_t = +tt;
@@ -221,8 +248,7 @@
             fwd_orbit_path_string = "M" + start_x + " " + start_y;
             back_orbit_path_string = fwd_orbit_path_string;
 
-            // while (Math.abs(fwd_x - start_x) + Math.abs(fwd_y - start_y) > 1 && counter < 200) {
-            while (counter < 200) {
+            while (counter < 2000) {
                 fwd_t += dt;
                 back_t -= dt;
                 counter += 1;
@@ -231,8 +257,8 @@
                 back_x = x0;
                 back_y = y0;
                 for (var j = 1; j <= i; j++) {
-                    var fwd_angle = fwd_t/orbital_periods[j] * TAU;
-                    var back_angle = back_t/orbital_periods[j] * TAU;
+                    var fwd_angle = fwd_t/global_period*orbital_frequencies[j] * TAU;
+                    var back_angle = back_t/global_period*orbital_frequencies[j] * TAU;
                     var r = +orbital_radii[j];
                     var phi = +orbital_phases[j];
                     fwd_x += r * Math.cos(fwd_angle + phi);
@@ -279,8 +305,13 @@
                     planet = heavenly_bodies[i];
                     old_cx = +planet.attr('cx');
                     old_cy = +planet.attr('cy');
-                    planet.attr('cx', old_cx + dx);
-                    planet.attr('cy', old_cy + dy);
+                    planet
+                        .attr('cx', old_cx + dx)
+                        .attr('cy', old_cy + dy);
+                    label = planet_labels[i-1];
+                    label
+                        .attr('x', old_cx + dx)
+                        .attr('y', old_cy + dy);
                 }
                 if (i != 0) {
                     updateOrbitalDataForPlanet(i);
@@ -293,7 +324,29 @@
 
         dragHandler(d3.select("svg").selectAll("circle"));
         
-    
+        d3.select('svg').selectAll('circle').on("click", function() {
+            var ii;
+            var clickedOnEpicycle = true;
+            var b = d3.select(this); // the planet registering the drag
+            for (var i = 0; i < heavenly_bodies.length; i++) {
+                if (heavenly_bodies[i].attr('id') == b.attr('id')) {
+                    ii = i;
+                    clickedOnEpicycle = false;
+                }
+            }
+            if (clickedOnEpicycle) {return;}
+
+            if (d3.event.y < +b.attr('cy')) {
+                orbital_frequencies[ii]++;
+            } else {
+                orbital_frequencies[ii]--;
+            }
+            orbital_periods[ii] = global_period/orbital_frequencies[ii];
+            planet_labels[ii-1].text(orbital_frequencies[ii]);
+            drawOrbits(0);
+
+        });
+
     
     
     
@@ -309,5 +362,8 @@
     
 
     </script>
+    <br/>   
+    <button onclick="togglePlay();" id='play_button'>Play/Pause</button>
+
 </body>
 
