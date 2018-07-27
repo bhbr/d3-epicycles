@@ -3,13 +3,23 @@
     <meta charset="utf-8">
     <script src="d3.v4.min.js"></script>
     <style>
-        body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+        body {
+            margin:0;position:fixed;top:0;right:0;bottom:0;left:0;
+            font-family: "Helvetica";
+            font-size: 25px;
+        }
+        input {
+            font-family: "Helvetica";
+            font-size: 25px;
+        }
         svg text {
             -webkit-user-select: none;
             -webkit-moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            cursor: default; 
+            cursor: default;
+            font-size: 25px;
+            font-family: "Helvetica";
         }
         svg text::selection {
             background: none;
@@ -101,7 +111,10 @@
         function setupPlanets(n) {
             body_radii = linspace(30,20,nb_bodies);
             body_colors = colorwheel(nb_bodies);
-            ids = body_radii;
+            ids = [];
+            for (var i = 0; i < 100; i++) {
+                ids.push(i);
+            }
 
             shouldDrawTraces = [];
             shouldDrawOrbits = [];
@@ -148,7 +161,8 @@
               .attr("r", body_radii[i])
               .attr("fill", body_colors[i])
               .attr("id", ids[i])
-              .attr("stroke", "black");
+              .attr("stroke", "black")
+              .attr("stroke-width", 2);
               heavenly_bodies.push(new_body);
         }
 
@@ -200,10 +214,15 @@
         function togglePlay() {
             shouldPlay = !shouldPlay;
             if (shouldPlay) {
+                deselectPlanet();
+                document.getElementById('play_button').src = 'pause.png';
+                document.getElementById('play_button').width = '64px';
                 timer = d3.timer(playOrbit);
             } else {
                 timer.stop();
                 timestamp += addedTime;
+                document.getElementById('play_button').src = 'play.png';
+                document.getElementById('play_button').width = '64px';
                 updateOrbitalData();
             }
         }
@@ -234,7 +253,19 @@
                 if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i,t); }
 
             }
+            fixHierarchy();
 
+        }
+
+        function fixHierarchy() {
+            for (var i = 0; i < nb_bodies; i++) {
+                heavenly_bodies[i].raise();
+                if (i != 0) { planet_labels[i-1].raise(); }
+            }
+            if (upArrowBox != undefined) { upArrowBox.raise(); }
+            if (upArrow != undefined) { upArrow.raise(); }
+            if (downArrowBox != undefined) { downArrowBox.raise(); }
+            if (downArrow != undefined) { downArrow.raise(); }
         }
 
         function updateEpicycles() {
@@ -251,8 +282,8 @@
                 var angle = (addedTime)/orbital_periods[i] * TAU + orbital_phases[i];
                 x += orbital_radii[i] * Math.cos(angle);
                 y -= orbital_radii[i] * Math.sin(angle);
-
             }
+            fixHierarchy();
         }
 
         function updateOrbitalDataForPlanet(i) {
@@ -297,8 +328,9 @@
 
         function drawOrbits(tt) {
             for (var i = 0; i < nb_bodies; i++) {
-                if (shouldDrawOrbits[i]) { drawOrbitForPlanet(i, tt); }
+                if (shouldDrawOrbits[i]) {drawOrbitForPlanet(i, tt); }
             }
+            fixHierarchy();
         }
 
         function drawOrbitForPlanet(i, tt) {
@@ -363,29 +395,24 @@
                 .attr("stroke", "black");   
         }
 
-
-
-        var dragHandler = d3.drag().on("drag", function() {
+        function dragPlanet() {
 
             deselectPlanet();
             addedTime = 0;
           
-            dx = d3.event.x - d3.select(this).attr('cx');
-            dy = d3.event.y - d3.select(this).attr('cy');
-          
-            var ii;
-            var b = d3.select(this); // the planet registering the drag
+            var b = d3.select(this); // the planet or label registering the drag
+            var ii = +b.attr('id');
+            draggedPlanet = heavenly_bodies[ii];
+            dx = d3.event.x - draggedPlanet.attr('cx');
+            dy = d3.event.y - draggedPlanet.attr('cy');
+
             for (var i = 0; i < heavenly_bodies.length; i++) {
-                if (heavenly_bodies[i].attr('id') == b.attr('id')) {
-                    ii = i;
-                    if (i != 0) {
-                        updateOrbitalDataForPlanet(ii);
-                    }
-                }
                 if (i >= ii) {
                     planet = heavenly_bodies[i];
                     old_cx = +planet.attr('cx');
                     old_cy = +planet.attr('cy');
+
+          
                     planet
                         .attr('cx', old_cx + dx)
                         .attr('cy', old_cy + dy);
@@ -402,15 +429,16 @@
             }
             drawOrbits(0);
             updateEpicycles();
+        }
 
-        });
+        var dragHandler = d3.drag().on("drag", dragPlanet);
 
         dragHandler(d3.select("svg").selectAll("circle"));
+        dragHandler(d3.select("svg").selectAll("text"));
         
         function increment_frequency() {
             var ii;
             var b = d3.select(this); // the clicked arrow
-            console.log(b);
             for (var i = 1; i < heavenly_bodies.length; i++) {
                 if (planet_labels[i - 1].attr('id') == b.attr('id')) {
                     ii = i;
@@ -426,13 +454,12 @@
         function decrement_frequency() {
             var ii;
             var b = d3.select(this); // the clicked arrow
-            console.log(b);
             for (var i = 1; i < heavenly_bodies.length; i++) {
                 if (planet_labels[i - 1].attr('id') == b.attr('id')) {
                     ii = i;
                 }
             }
-
+            console.log(ii);
             orbital_frequencies[ii]--;
             orbital_periods[ii] = global_period/orbital_frequencies[ii];
             planet_labels[ii-1].text(orbital_frequencies[ii]);
@@ -440,6 +467,7 @@
         }
 
         d3.select('svg').selectAll('circle').on("click", selectPlanet);
+        d3.select('svg').selectAll('text').on("click", selectPlanet);
 
     
     
@@ -498,7 +526,7 @@
             planet_labels.push(new_label);
 
             dragHandler(new_body);
-            new_body.on("click", increment_frequency);
+            new_body.on("click", selectPlanet);
 
             updateEpicycles();
             drawOrbits(0);
@@ -523,31 +551,65 @@
         }
     
         var selectedPlanet;
+        var upArrowBox, downArrowBox;
+
         function selectPlanet() {
             deselectPlanet();
-            var planet = d3.select(this);
+            var ii = +d3.select(this).attr('id');
+            console.log(ii);
+            if (ii == 0) { return; }
+            var planet = heavenly_bodies[ii];
             selectedPlanet = planet;
-            planet.attr('opacity', 0.5);
+
+            planet.attr('stroke-width', 5);
+
+            for (var i = 0; i < nb_bodies; i++) {
+                if (i != ii) {
+                    heavenly_bodies[i].attr('opacity', 0.3);
+                    if (i != 0) { planet_labels[i - 1].attr('opacity', 0.3); }
+                }
+            }
+
+            upArrowBox = svg.append('rect')
+                .attr('x', +planet.attr('cx') + 10)
+                .attr('y', +planet.attr('cy') - 30)
+                .attr('width', 30)
+                .attr('height', 30)
+                .attr('fill', 'white')
+                .attr('stroke', 'black');
             upArrow = svg.append('text')
                 .text("⬆︎")
                 .attr('text-anchor', 'left')
-                .attr('x', +planet.attr('cx') + 7)
-                .attr('y', +planet.attr('cy') - 4)
+                .attr('x', +planet.attr('cx') + 12)
+                .attr('y', +planet.attr('cy') - 5)
                 .attr('id', planet.attr('id'));
-            upArrow.on('click', increment_frequency);
+            downArrowBox = svg.append('rect')
+                .attr('x', +planet.attr('cx') + 10)
+                .attr('y', +planet.attr('cy'))
+                .attr('width', 30)
+                .attr('height', 30)
+                .attr('fill', 'white')
+                .attr('stroke', 'black');
             downArrow = svg.append('text')
                 .text("⬇︎")
                 .attr('text-anchor', 'left')
-                .attr('x', +planet.attr('cx') + 7)
-                .attr('y', +planet.attr('cy') + 13)
+                .attr('x', +planet.attr('cx') + 12)
+                .attr('y', +planet.attr('cy') + 25)
                 .attr('id', planet.attr('id'));
+            upArrow.on('click', increment_frequency);
             downArrow.on('click', decrement_frequency);
 
         }
     
         function deselectPlanet() {
             if (selectedPlanet != undefined) {
-                selectedPlanet.attr('opacity', 1.0);
+                selectedPlanet.attr('stroke-width', 2);
+                for (var i = 0; i < nb_bodies; i++) {
+                    heavenly_bodies[i].attr('opacity', 1);
+                    if (i < nb_bodies - 1) {
+                        planet_labels[i].attr('opacity', 1);
+                    }
+                }
                 selectedPlanet = undefined;
             }
             if (upArrow != undefined) {
@@ -558,18 +620,29 @@
                 downArrow.remove();
                 downArrow = undefined;
             }
+            if (upArrowBox != undefined) {
+                upArrowBox.remove();
+                upArrowBox = undefined;
+            }
+            if (downArrowBox != undefined) {
+                downArrowBox.remove();
+                downArrowBox = undefined;
+            }
         }
     
     </script>
 
-    <br/>   
-    <button onclick="togglePlay();" id='play_button'>Play/Pause</button>
-    <button onclick="addPlanet();" id='add_planet_button'>Add Epicycle</button>
-    <button onclick="removePlanet();" id='remove_planet_button'>Remove Epicycle</button>
+    <br/>
+    <span>&nbsp;</span>
+    <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
+    <span onclick="addPlanet();" id='add_planet_button' style='width: 100px; background-color: orange;'>&nbsp;+&nbsp;</span>
+    <span onclick="removePlanet();" id='add_planet_button' style='width: 100px; background-color: orange;'>&nbsp;–&nbsp;</span>
     <input type="checkbox" name="venus" value="venus"
                value="show_venus" /><label for="venus">Show Orbit of Venus</label>
-
+    </div>
     <script>
+
+
         venusCheckbox = document.querySelector('input[value="venus"]');
         venusCheckbox.onchange = function() {
             if (venusCheckbox.checked) {
