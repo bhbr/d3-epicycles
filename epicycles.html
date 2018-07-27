@@ -128,10 +128,11 @@
         
         function setupOrbits(n) {
             
-            orbital_radii = linspace(100,20,nb_bodies);
+            orbital_radii = linspace(300,70,nb_bodies);
             orbital_radii[0] = 0;
 
-            orbital_frequencies = linspace(0,nb_bodies - 1, nb_bodies);
+            orbital_frequencies = linspace(1, 3 * (nb_bodies - 1) + 1, nb_bodies);
+            orbital_frequencies.splice(0,0,0);
             orbital_periods = [];
             for (var i = 0; i < nb_bodies; i++) {
                 orbital_periods.push(global_period/orbital_frequencies[i]);
@@ -635,10 +636,10 @@
     <br/>
     <span>&nbsp;</span>
     <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
-    <span onclick="addPlanet();" id='add_planet_button' style='width: 100px; background-color: orange;'>&nbsp;+&nbsp;</span>
-    <span onclick="removePlanet();" id='add_planet_button' style='width: 100px; background-color: orange;'>&nbsp;–&nbsp;</span>
+    <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='plus.png'></img>
+    <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='minus.png'></img>
     <input type="checkbox" name="venus" value="venus"
-               value="show_venus" /><label for="venus">Show Orbit of Venus</label>
+               value="show_venus" /><label for="venus"></label>
     </div>
     <script>
 
