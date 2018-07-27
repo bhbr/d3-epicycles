@@ -54,7 +54,7 @@
         var svg_width = 550;
         var svg_height = 550;
 
-        var nb_bodies = 7;
+        var nb_bodies = 3;
         var global_period = 6000;
 
         var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTraces, shouldDrawOrbits, fwd_orbits, back_orbits;
@@ -69,6 +69,8 @@
         function clearOrbits() {
             // INSTANTIATING FORWARD AND BACK ORBITS //
             // again in svg and in an array
+            svg.selectAll("path").remove();
+
             fwd_orbits = [];
             for (var i = 0; i < nb_bodies; i++) {
                 var new_orbit = svg.append("path")
@@ -86,7 +88,7 @@
         }
 
         function setupPlanets(n) {
-            body_radii = linspace(30,10,nb_bodies);
+            body_radii = linspace(30,20,nb_bodies);
             body_colors = colorwheel(nb_bodies);
             ids = body_radii;
 
@@ -391,7 +393,7 @@
 
         dragHandler(d3.select("svg").selectAll("circle"));
         
-        d3.select('svg').selectAll('circle').on("click", function() {
+        function increment_frequency() {
             var ii;
             var clickedOnEpicycle = true;
             var b = d3.select(this); // the planet registering the drag
@@ -411,8 +413,9 @@
             orbital_periods[ii] = global_period/orbital_frequencies[ii];
             planet_labels[ii-1].text(orbital_frequencies[ii]);
             drawOrbits(0);
+        }
 
-        });
+        d3.select('svg').selectAll('circle').on("click", increment_frequency);
 
     
     
@@ -437,10 +440,21 @@
 
         var cx = +heavenly_bodies[0].attr('cx');
         var cy = +heavenly_bodies[0].attr('cy');
-        for (var i = 0; i < nb_bodies; i++) {
+        for (var i = 0; i < nb_bodies - 1; i++) {
             cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
             cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
         }
+
+        var new_epicycle = svg.append('circle')
+            .attr('cx',cx)
+            .attr('cy',cy)
+            .attr('stroke','gray')
+            .attr('fill','none');
+        epicycles.push(new_epicycle);
+
+        cx += orbital_radii[nb_bodies - 1] * Math.cos(orbital_phases[nb_bodies - 1]);
+        cy -= orbital_radii[nb_bodies - 1] * Math.sin(orbital_phases[nb_bodies - 1]);
+
         var new_body = svg.append("circle")
             .attr("cx", cx)
             .attr("cy", cy)
@@ -450,11 +464,38 @@
             .attr("stroke", "black");
         heavenly_bodies.push(new_body);
 
+        var new_label = svg.append("text")
+            .text(orbital_frequencies[nb_bodies - 1])
+            .attr('text-anchor', 'middle')
+            .attr('alignment-baseline', 'ideographic')
+            .attr('x', heavenly_bodies[nb_bodies - 1].attr('cx'))
+            .attr('y', heavenly_bodies[nb_bodies - 1].attr('cy'));
+        planet_labels.push(new_label);
+
+        dragHandler(new_body);
+        new_body.on("click", increment_frequency);
+
+        updateEpicycles();
         drawOrbits(0);
 
     }
     
-    
+    function removePlanet() {
+        
+        if (shouldPlay) { return; }
+        console.log(nb_bodies);
+        heavenly_bodies[nb_bodies - 1].remove();
+        planet_labels[nb_bodies - 2].remove();
+        epicycles[nb_bodies - 2].remove();
+        heavenly_bodies.pop();
+        planet_labels.pop();
+        epicycles.pop();
+
+        nb_bodies--;
+        setupPlanets(nb_bodies);
+        clearOrbits();
+        drawOrbits(0);
+    }
     
     
     
@@ -468,6 +509,7 @@
     <br/>   
     <button onclick="togglePlay();" id='play_button'>Play/Pause</button>
     <button onclick="addPlanet();" id='add_planet_button'>Add Epicycle</button>
+    <button onclick="removePlanet();" id='remove_planet_button'>Remove Epicycle</button>
 
 </body>
 
