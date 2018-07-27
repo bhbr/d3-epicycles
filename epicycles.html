@@ -57,7 +57,7 @@
         var nb_bodies = 3;
         var global_period = 6000;
 
-        var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTraces, shouldDrawOrbits, fwd_orbits, back_orbits;
+        var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTraces, shouldDrawOrbits, fwd_orbits, back_orbits, upArrow, downArrow, venus_image;
 
 
         var body = d3.select("body");
@@ -65,6 +65,17 @@
             .attr("width", svg_width)
             .attr("height",svg_height);
 
+
+        var backgroundRect = svg.append('rect')
+            .attr('x',0)
+            .attr('y',0)
+            .attr('width',svg_width)
+            .attr('height',svg_height)
+            .attr('fill','white')
+            .attr('opacity',0)
+            .attr('stroke','none');
+
+        d3.select('svg').selectAll('rect').on('click', deselectPlanet);
 
         function clearOrbits() {
             // INSTANTIATING FORWARD AND BACK ORBITS //
@@ -149,7 +160,8 @@
             .attr('text-anchor', 'middle')
             .attr('alignment-baseline', 'ideographic')
             .attr('x', heavenly_bodies[i].attr('cx'))
-            .attr('y', heavenly_bodies[i].attr('cy'));
+            .attr('y', heavenly_bodies[i].attr('cy'))
+            .attr('id', heavenly_bodies[i].attr('id'));
             planet_labels.push(new_label);
         }
 
@@ -166,6 +178,7 @@
                 .attr("opacity", 0.3);
             epicycles.push(new_epicycle);
         }
+
         
         // TRACES (TAILS) //
         var traces = [];
@@ -354,6 +367,7 @@
 
         var dragHandler = d3.drag().on("drag", function() {
 
+            deselectPlanet();
             addedTime = 0;
           
             dx = d3.event.x - d3.select(this).attr('cx');
@@ -395,121 +409,186 @@
         
         function increment_frequency() {
             var ii;
-            var clickedOnEpicycle = true;
-            var b = d3.select(this); // the planet registering the drag
-            for (var i = 0; i < heavenly_bodies.length; i++) {
-                if (heavenly_bodies[i].attr('id') == b.attr('id')) {
+            var b = d3.select(this); // the clicked arrow
+            console.log(b);
+            for (var i = 1; i < heavenly_bodies.length; i++) {
+                if (planet_labels[i - 1].attr('id') == b.attr('id')) {
                     ii = i;
-                    clickedOnEpicycle = false;
                 }
             }
-            if (clickedOnEpicycle) {return;}
 
-            if (d3.event.y < +b.attr('cy')) {
-                orbital_frequencies[ii]++;
-            } else {
-                orbital_frequencies[ii]--;
-            }
+            orbital_frequencies[ii]++;
             orbital_periods[ii] = global_period/orbital_frequencies[ii];
             planet_labels[ii-1].text(orbital_frequencies[ii]);
             drawOrbits(0);
         }
 
-        d3.select('svg').selectAll('circle').on("click", increment_frequency);
+        function decrement_frequency() {
+            var ii;
+            var b = d3.select(this); // the clicked arrow
+            console.log(b);
+            for (var i = 1; i < heavenly_bodies.length; i++) {
+                if (planet_labels[i - 1].attr('id') == b.attr('id')) {
+                    ii = i;
+                }
+            }
 
-    
-    
-    function addPlanet() {
-
-        if (shouldPlay) { return; }
-
-        nb_bodies++;
-        setupPlanets(nb_bodies);
-        clearOrbits();
-
-        for (var i = 0; i < nb_bodies - 1; i++) {
-            heavenly_bodies[i]
-                .attr("r", body_radii[i])
-                .attr("fill", body_colors[i])
-                .attr("id", ids[i]);
-        }
-        orbital_radii[nb_bodies - 1] = orbital_radii[nb_bodies - 2];
-        orbital_frequencies[nb_bodies - 1] = 0;
-        orbital_periods[nb_bodies - 1] = global_period/orbital_frequencies[nb_bodies - 1];
-        orbital_phases[nb_bodies - 1] = 0;
-
-        var cx = +heavenly_bodies[0].attr('cx');
-        var cy = +heavenly_bodies[0].attr('cy');
-        for (var i = 0; i < nb_bodies - 1; i++) {
-            cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
-            cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
+            orbital_frequencies[ii]--;
+            orbital_periods[ii] = global_period/orbital_frequencies[ii];
+            planet_labels[ii-1].text(orbital_frequencies[ii]);
+            drawOrbits(0);
         }
 
-        var new_epicycle = svg.append('circle')
-            .attr('cx',cx)
-            .attr('cy',cy)
-            .attr('stroke','gray')
-            .attr('fill','none');
-        epicycles.push(new_epicycle);
+        d3.select('svg').selectAll('circle').on("click", selectPlanet);
 
-        cx += orbital_radii[nb_bodies - 1] * Math.cos(orbital_phases[nb_bodies - 1]);
-        cy -= orbital_radii[nb_bodies - 1] * Math.sin(orbital_phases[nb_bodies - 1]);
+    
+    
+        function addPlanet() {
 
-        var new_body = svg.append("circle")
-            .attr("cx", cx)
-            .attr("cy", cy)
-            .attr("r", body_radii[nb_bodies - 1])
-            .attr("fill", body_colors[nb_bodies - 1])
-            .attr("id", ids[nb_bodies - 1])
-            .attr("stroke", "black");
-        heavenly_bodies.push(new_body);
+            if (shouldPlay) { return; }
 
-        var new_label = svg.append("text")
-            .text(orbital_frequencies[nb_bodies - 1])
-            .attr('text-anchor', 'middle')
-            .attr('alignment-baseline', 'ideographic')
-            .attr('x', heavenly_bodies[nb_bodies - 1].attr('cx'))
-            .attr('y', heavenly_bodies[nb_bodies - 1].attr('cy'));
-        planet_labels.push(new_label);
+            nb_bodies++;
+            setupPlanets(nb_bodies);
+            clearOrbits();
 
-        dragHandler(new_body);
-        new_body.on("click", increment_frequency);
+            for (var i = 0; i < nb_bodies - 1; i++) {
+                heavenly_bodies[i]
+                    .attr("r", body_radii[i])
+                    .attr("fill", body_colors[i])
+                    .attr("id", ids[i]);
+            }
+            orbital_radii[nb_bodies - 1] = orbital_radii[nb_bodies - 2];
+            orbital_frequencies[nb_bodies - 1] = 0;
+            orbital_periods[nb_bodies - 1] = global_period/orbital_frequencies[nb_bodies - 1];
+            orbital_phases[nb_bodies - 1] = 0;
 
-        updateEpicycles();
-        drawOrbits(0);
+            var cx = +heavenly_bodies[0].attr('cx');
+            var cy = +heavenly_bodies[0].attr('cy');
+            for (var i = 0; i < nb_bodies - 1; i++) {
+                cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
+                cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
+            }
 
-    }
-    
-    function removePlanet() {
-        
-        if (shouldPlay) { return; }
-        console.log(nb_bodies);
-        heavenly_bodies[nb_bodies - 1].remove();
-        planet_labels[nb_bodies - 2].remove();
-        epicycles[nb_bodies - 2].remove();
-        heavenly_bodies.pop();
-        planet_labels.pop();
-        epicycles.pop();
+            var new_epicycle = svg.append('circle')
+                .attr('cx',cx)
+                .attr('cy',cy)
+                .attr('stroke','gray')
+                .attr('fill','none');
+            epicycles.push(new_epicycle);
 
-        nb_bodies--;
-        setupPlanets(nb_bodies);
-        clearOrbits();
-        drawOrbits(0);
-    }
-    
-    
-    
-    
-    
-    
-    
-    
+            cx += orbital_radii[nb_bodies - 1] * Math.cos(orbital_phases[nb_bodies - 1]);
+            cy -= orbital_radii[nb_bodies - 1] * Math.sin(orbital_phases[nb_bodies - 1]);
 
+            var new_body = svg.append("circle")
+                .attr("cx", cx)
+                .attr("cy", cy)
+                .attr("r", body_radii[nb_bodies - 1])
+                .attr("fill", body_colors[nb_bodies - 1])
+                .attr("id", ids[nb_bodies - 1])
+                .attr("stroke", "black");
+            heavenly_bodies.push(new_body);
+
+            var new_label = svg.append("text")
+                .text(orbital_frequencies[nb_bodies - 1])
+                .attr('text-anchor', 'middle')
+                .attr('alignment-baseline', 'ideographic')
+                .attr('x', heavenly_bodies[nb_bodies - 1].attr('cx'))
+                .attr('y', heavenly_bodies[nb_bodies - 1].attr('cy'))
+                .attr('id', heavenly_bodies[nb_bodies - 1].attr('id'));
+            planet_labels.push(new_label);
+
+            dragHandler(new_body);
+            new_body.on("click", increment_frequency);
+
+            updateEpicycles();
+            drawOrbits(0);
+
+        }
+    
+        function removePlanet() {
+            
+            if (shouldPlay) { return; }
+            console.log(nb_bodies);
+            heavenly_bodies[nb_bodies - 1].remove();
+            planet_labels[nb_bodies - 2].remove();
+            epicycles[nb_bodies - 2].remove();
+            heavenly_bodies.pop();
+            planet_labels.pop();
+            epicycles.pop();
+
+            nb_bodies--;
+            setupPlanets(nb_bodies);
+            clearOrbits();
+            drawOrbits(0);
+        }
+    
+        var selectedPlanet;
+        function selectPlanet() {
+            deselectPlanet();
+            var planet = d3.select(this);
+            selectedPlanet = planet;
+            planet.attr('opacity', 0.5);
+            upArrow = svg.append('text')
+                .text("⬆︎")
+                .attr('text-anchor', 'left')
+                .attr('x', +planet.attr('cx') + 7)
+                .attr('y', +planet.attr('cy') - 4)
+                .attr('id', planet.attr('id'));
+            upArrow.on('click', increment_frequency);
+            downArrow = svg.append('text')
+                .text("⬇︎")
+                .attr('text-anchor', 'left')
+                .attr('x', +planet.attr('cx') + 7)
+                .attr('y', +planet.attr('cy') + 13)
+                .attr('id', planet.attr('id'));
+            downArrow.on('click', decrement_frequency);
+
+        }
+    
+        function deselectPlanet() {
+            if (selectedPlanet != undefined) {
+                selectedPlanet.attr('opacity', 1.0);
+                selectedPlanet = undefined;
+            }
+            if (upArrow != undefined) {
+                upArrow.remove();
+                upArrow = undefined;
+            }
+            if (downArrow != undefined) {
+                downArrow.remove();
+                downArrow = undefined;
+            }
+        }
+    
     </script>
+
     <br/>   
     <button onclick="togglePlay();" id='play_button'>Play/Pause</button>
     <button onclick="addPlanet();" id='add_planet_button'>Add Epicycle</button>
     <button onclick="removePlanet();" id='remove_planet_button'>Remove Epicycle</button>
+    <input type="checkbox" name="venus" value="venus"
+               value="show_venus" /><label for="venus">Show Orbit of Venus</label>
+
+    <script>
+        venusCheckbox = document.querySelector('input[value="venus"]');
+        venusCheckbox.onchange = function() {
+            if (venusCheckbox.checked) {
+                venus_image = d3.selectAll('svg').insert('image','rect')
+                    .attr('xlink:href', 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Venus_geocentric_orbit_curve_simplified_Line_%28pentagram%29.svg/602px-Venus_geocentric_orbit_curve_simplified_Line_%28pentagram%29.svg.png')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width', svg_width)
+                    .attr('height', svg_height)
+                    .attr('opacity', 0.2);
+            } else {
+                if (venus_image != undefined) {
+                    venus_image.remove();
+                }
+            }
+        };
+    </script>
+    
+
 
 </body>
 
