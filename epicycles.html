@@ -70,8 +70,8 @@
         var svg_width = 1200;
         var svg_height = 780;
 
-        var nb_bodies = 3;
-        var global_period = 6000;
+        var nb_bodies = 9;
+        var global_period = 15000;
 
         var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTrace, shouldDrawOrbit, orbit, upArrow, downArrow, venus_image, heavenly_bodies, planet_labels, epicycles, links, trace, trace_array, dragstart_x, dragstart_y;
 
@@ -80,6 +80,7 @@
 
         traceSpacing = 5;
         traceSpacingCounter = 0;
+        maxTraceSize = 100;
 
         var body = d3.select("body");
         var svg = body.append("svg")
@@ -223,19 +224,23 @@
         
         function setupOrbitalData(n) {
             
-            orbital_radii = linspace(300,70,nb_bodies);
-            orbital_radii[0] = 0;
+            //orbital_radii = linspace(300,70,nb_bodies);
+            r = 200;
+            orbital_radii = [r, r/5, r/7, r/11, r/13, r/17, r/19, r/23, r/25];
+            orbital_radii.splice(0,0,0);
 
-            orbital_frequencies = linspace(1, 3 * (nb_bodies - 1) + 1, nb_bodies);
+            //orbital_frequencies = linspace(1, 3 * (nb_bodies - 1) + 1, nb_bodies);
+            orbital_frequencies = [1,-5,7,-11,13,-17,19,-23,25];
             orbital_frequencies.splice(0,0,0);
             orbital_periods = [];
             for (var i = 0; i < nb_bodies; i++) {
                 orbital_periods.push(global_period/orbital_frequencies[i]);
             }
-            orbital_phases = [];
-            for (var i = 0; i < nb_bodies; i++) {
-                orbital_phases.push(Math.random() * TAU);
-            }
+            // orbital_phases = [];
+            // for (var i = 0; i < nb_bodies; i++) {
+            //     orbital_phases.push(Math.random() * TAU);
+            // }
+            orbital_phases = [-TAU/12, 5/12*TAU,-TAU/12, 5/12*TAU,-TAU/12, 5/12*TAU,-TAU/12, 5/12*TAU,-TAU/12];
 
         }
         
@@ -275,7 +280,7 @@
                 new_label = svg.append("text")
                 .text(orbital_frequencies[i])
                 .attr('fill', 'white')
-                .style('font-size', 1.6 * heavenly_bodies[i].attr('r') + 'px')
+                .style('font-size', 1.2 * heavenly_bodies[i].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
                 .attr('alignment-baseline', 'central')
                 .attr('x', heavenly_bodies[i].attr('cx'))
@@ -365,6 +370,7 @@
             for (var i = 1; i < nb_bodies; i++) {
 
                 var angle = t/orbital_periods[i] * TAU + orbital_phases[i];
+                console.log(angle);
                 x += orbital_radii[i] * Math.cos(angle);
                 y -= orbital_radii[i] * Math.sin(angle);
                 heavenly_bodies[i]
@@ -540,7 +546,7 @@
                 
             trace_array.push(tracePoint);
                 
-            if (trace_array.length > 20) {
+            if (trace_array.length > maxTraceSize) {
                 trace_array[0].remove();
                 trace_array.shift();
             }
