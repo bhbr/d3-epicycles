@@ -269,6 +269,7 @@
             if (downArrow != undefined) { downArrow.raise(); }
         }
 
+        var shouldShowEpicycles = true;
         function updateEpicycles() {
 
             var x = +heavenly_bodies[0].attr('cx');
@@ -283,8 +284,37 @@
                 var angle = (addedTime)/orbital_periods[i] * TAU + orbital_phases[i];
                 x += orbital_radii[i] * Math.cos(angle);
                 y -= orbital_radii[i] * Math.sin(angle);
+
             }
+
+            if (shouldShowEpicycles) { showEpicycles(); }
+            else { hideEpicycles(); }
+
             fixHierarchy();
+        }
+
+        function showEpicycles() {
+            for (var i = 1; i < nb_bodies; i++) {
+                epicycles[i - 1].attr('opacity', 0.3);
+            }
+        }
+
+        function hideEpicycles() {
+            for (var i = 1; i < nb_bodies; i++) {
+                epicycles[i - 1].attr('opacity',0);
+            }
+        }
+
+        function toggleEpicycles() {
+            shouldShowEpicycles = !shouldShowEpicycles;
+            if (shouldShowEpicycles) {
+                showEpicycles();
+                document.getElementById('epicycles_button').src='epicycles-on.png';
+            } else {
+                hideEpicycles();
+                document.getElementById('epicycles_button').src='epicycles-off.png';
+            }
+            
         }
 
         function updateOrbitalDataForPlanet(i) {
