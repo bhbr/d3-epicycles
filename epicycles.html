@@ -85,7 +85,8 @@
         var svg = body.append("svg")
             .attr("width", svg_width)
             .attr("height",svg_height)
-            .call(d3.zoom().on("zoom", zoom));
+            .call(d3.zoom().on("zoom", zoom))
+            .on("dblclick.zoom", null);
 
         var backgroundRect = svg.append('rect')
             .attr('x',0)
@@ -113,13 +114,13 @@
             gradient1.append("stop")
                .attr('class', 'start')
                .attr("offset", "0%")
-               .attr("stop-color", "#FF0")
+               .attr("stop-color", "#DD0")
                .attr("stop-opacity", 1);
 
             gradient1.append("stop")
                .attr('class', 'end')
                .attr("offset", "100%")
-               .attr("stop-color", "#CC0")
+               .attr("stop-color", "#770")
                .attr("stop-opacity", 1);
 
 
@@ -133,13 +134,13 @@
             gradient2.append("stop")
                .attr('class', 'start')
                .attr("offset", "0%")
-               .attr("stop-color", "#0F0")
+               .attr("stop-color", "#0D0")
                .attr("stop-opacity", 1);
 
             gradient2.append("stop")
                .attr('class', 'end')
                .attr("offset", "100%")
-               .attr("stop-color", "#0C0")
+               .attr("stop-color", "#070")
                .attr("stop-opacity", 1);
 
 
@@ -153,13 +154,13 @@
             gradient3.append("stop")
                .attr('class', 'start')
                .attr("offset", "0%")
-               .attr("stop-color", "#F00")
+               .attr("stop-color", "#D00")
                .attr("stop-opacity", 1);
 
             gradient3.append("stop")
                .attr('class', 'end')
                .attr("offset", "100%")
-               .attr("stop-color", "#C00")
+               .attr("stop-color", "#700")
                .attr("stop-opacity", 1);
 
 
@@ -173,7 +174,7 @@
             gradient4.append("stop")
                .attr('class', 'start')
                .attr("offset", "0%")
-               .attr("stop-color", "#04F")
+               .attr("stop-color", "#07F")
                .attr("stop-opacity", 1);
 
             gradient4.append("stop")
@@ -193,13 +194,13 @@
             gradient5.append("stop")
                .attr('class', 'start')
                .attr("offset", "0%")
-               .attr("stop-color", "#777")
+               .attr("stop-color", "#B0B")
                .attr("stop-opacity", 1);
 
             gradient5.append("stop")
                .attr('class', 'end')
                .attr("offset", "100%")
-               .attr("stop-color", "#444")
+               .attr("stop-color", "#505")
                .attr("stop-opacity", 1);
 
         }
@@ -207,8 +208,12 @@
 
 
         function setupPlanets(n) {
-            body_radii = linspace(30,20,nb_bodies);
-            body_colors = colorwheel(nb_bodies);
+            //body_radii = linspace(30,20,nb_bodies);
+            body_radii = [30];
+            for (var i = 0; i < 100; i++) {
+                body_radii.push(0.75 * body_radii[body_radii.length - 1]);
+            }
+            body_colors = colorwheel(100);
             ids = [];
             for (var i = 0; i < 100; i++) {
                 ids.push(i);
@@ -270,8 +275,9 @@
                 new_label = svg.append("text")
                 .text(orbital_frequencies[i])
                 .attr('fill', 'white')
+                .style('font-size', 1.6 * heavenly_bodies[i].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
-                .attr('alignment-baseline', 'ideographic')
+                .attr('alignment-baseline', 'central')
                 .attr('x', heavenly_bodies[i].attr('cx'))
                 .attr('y', heavenly_bodies[i].attr('cy'))
                 .attr('id', heavenly_bodies[i].attr('id'));
@@ -423,14 +429,30 @@
             }
         }
 
-        function toggleEpicycles() {
-            shouldShowEpicycles = !shouldShowEpicycles;
+        function toggleEpicyclesAndLinks() {
+
+            if (shouldShowEpicycles) {
+                shouldShowEpicycles = false;
+                shouldShowLinks = true;
+                document.getElementById('epicycles_button').src='links-on.png';
+            } else if (shouldShowLinks) {
+                shouldShowLinks = false;
+                document.getElementById('epicycles_button').src='planets.png';
+            } else {
+                shouldShowEpicycles = true;
+                document.getElementById('epicycles_button').src='epicycles-on.png';
+            }
+
             if (shouldShowEpicycles) {
                 showEpicycles();
-                document.getElementById('epicycles_button').src='epicycles-on.png';
             } else {
                 hideEpicycles();
-                document.getElementById('epicycles_button').src='epicycles-off.png';
+            }
+
+            if (shouldShowLinks) {
+                showLinks();
+            } else {
+                hideLinks();
             }
             
         }
@@ -528,16 +550,16 @@
 
         function drawOrbit(tt) {
 
-            nb_steps = 200;
+            nb_steps = 1000;
             var dt = global_period/nb_steps;
             var fwd_t = tt;
-            var start_x = +heavenly_bodies[nb_bodies - 1].attr('cx');
-            var start_y = +heavenly_bodies[nb_bodies - 1].attr('cy');
+            //var start_x = +heavenly_bodies[nb_bodies - 1].attr('cx');
+            //var start_y = +heavenly_bodies[nb_bodies - 1].attr('cy');
             var x0 = +heavenly_bodies[0].attr('cx');
             var y0 = +heavenly_bodies[0].attr('cy');
             var counter = 0;
 
-            orbit_path_string = "M" + start_x + " " + start_y;
+            orbit_path_string = "";// "M" + start_x + " " + start_y;
 
             while (counter < nb_steps) {
                 fwd_t += dt;
@@ -551,8 +573,14 @@
                     x += r * Math.cos(fwd_angle + phi);
                     y -= r * Math.sin(fwd_angle + phi);
                 }
-                orbit_path_string += "L" + x + " " + y;
+                if (counter == 1) {
+                    orbit_path_string += "M";
+                } else {
+                    orbit_path_string += "L";
+                }
+                orbit_path_string += x + " " + y;
             }
+            orbit_path_string += "Z";
 
             orbit.remove();
             orbit = svg.append('path')
@@ -744,8 +772,9 @@
             var new_label = svg.append("text")
                 .text(orbital_frequencies[nb_bodies - 1])
                 .attr('fill', 'white')
+                .style('font-size', 1.6 * heavenly_bodies[nb_bodies - 1].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
-                .attr('alignment-baseline', 'ideographic')
+                .attr('alignment-baseline', 'central')
                 .attr('x', heavenly_bodies[nb_bodies - 1].attr('cx'))
                 .attr('y', heavenly_bodies[nb_bodies - 1].attr('cy'))
                 .attr('id', heavenly_bodies[nb_bodies - 1].attr('id'))
@@ -769,9 +798,11 @@
             heavenly_bodies[nb_bodies - 1].remove();
             planet_labels[nb_bodies - 2].remove();
             epicycles[nb_bodies - 2].remove();
+            links[nb_bodies - 2].remove();
             heavenly_bodies.pop();
             planet_labels.pop();
             epicycles.pop();
+            links.pop();
 
             nb_bodies--;
             setupPlanets(nb_bodies);
@@ -798,16 +829,16 @@
 
             upArrow = svg.append('text')
                 .text("⬆︎")
-                .attr('font-size', 20)
+                .style('font-size', planet.attr('r') + 'px')
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
                 .attr('x', +planet.attr('cx'))
-                .attr('y', +planet.attr('cy') - planet.attr('r') - 5)
+                .attr('y', +planet.attr('cy') - 1.2 * planet.attr('r'))
                 .attr('id', planet.attr('id'))
                 .attr('transform',T);
             downArrow = svg.append('text')
                 .text("⬇")
-                .attr('font-size', 20)
+                .style('font-size', planet.attr('r') + 'px')
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
                 .attr('x', +planet.attr('cx'))
@@ -878,15 +909,14 @@
     </script>
 
     <br/>
-    <span>&nbsp;</span>
-    <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
-    <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='plus.png'></img>
-    <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='minus.png'></img>
-    <img onclick="toggleEpicycles();" id='epicycles_button' style='width: 64px;' src='epicycles-on.png'></img>
-    <img onclick="toggleLinks();" id='links_button' style='width: 64px;' src='links-off.png'></img>
-    <img onclick="toggleTrace();" id='trace_button' style='width: 64px;' src='show_trace.png'></img>
-    <input type="checkbox" name="venus" value="venus"
-               value="show_venus" /><label for="venus"></label>
+    <div style='text-align: center;'>
+        <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
+        <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='plus.png'></img>
+        <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='minus.png'></img>
+        <img onclick="toggleEpicyclesAndLinks();" id='epicycles_button' style='width: 64px;' src='epicycles-on.png'></img>
+        <img onclick="toggleTrace();" id='trace_button' style='width: 64px;' src='show_trace.png'></img>
+        <!--<input type="checkbox" name="venus" value="venus"
+               value="show_venus" /><label for="venus"></label>-->
     </div>
     <script>
 
