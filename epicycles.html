@@ -510,7 +510,7 @@
                 
             trace_array.push(tracePoint);
                 
-            if (trace.length > 20) {
+            if (trace_array.length > 20) {
                 trace_array[0].remove();
                 trace_array.shift();
             }
@@ -535,7 +535,6 @@
 
             while (counter < nb_steps) {
                 fwd_t += dt;
-                console.log(fwd_t);
                 counter += 1;
                 var x = x0;
                 var y = y0;
@@ -564,19 +563,31 @@
             shouldDrawOrbit = !shouldDrawOrbit;
             shouldDrawTrace = !shouldDrawTrace;
             if (shouldDrawOrbit) {
+                eraseTrace();
                 drawOrbit(0);
                 document.getElementById('trace_button').src = 'show_orbit.png';
             }
             if (shouldDrawTrace) {
+                orbit.remove();
                 updateTrace();
                 document.getElementById('trace_button').src = 'show_trace.png';
             }
         }
 
+        function eraseTrace() {
+            console.log(trace_array.length);
+            for (var i = 0; i < trace_array.length; i++) {
+                trace_array[i].remove();
+            }
+            trace_array = [];
+        }
+
         function dragPlanet() {
 
             deselectPlanet();
+            eraseTrace();
             addedTime = 0;
+
           
             var b = d3.select(this); // the planet or label registering the drag
             var ii = +b.attr('id');
@@ -617,6 +628,7 @@
         
         function increment_frequency() {
             var ii;
+            eraseTrace();
             var b = d3.select(this); // the clicked arrow
             for (var i = 1; i < heavenly_bodies.length; i++) {
                 if (planet_labels[i - 1].attr('id') == b.attr('id')) {
@@ -632,6 +644,7 @@
 
         function decrement_frequency() {
             var ii;
+            eraseTrace();
             var b = d3.select(this); // the clicked arrow
             for (var i = 1; i < heavenly_bodies.length; i++) {
                 if (planet_labels[i - 1].attr('id') == b.attr('id')) {
@@ -654,6 +667,7 @@
             if (shouldPlay) { return; }
 
             nb_bodies++;
+            eraseTrace();
             setupPlanets(nb_bodies);
             clearOrbit();
 
@@ -731,6 +745,7 @@
         function removePlanet() {
             
             if (shouldPlay) { return; }
+            eraseTrace();
             heavenly_bodies[nb_bodies - 1].remove();
             planet_labels[nb_bodies - 2].remove();
             epicycles[nb_bodies - 2].remove();
@@ -825,6 +840,7 @@
 
         var T = d3.zoomIdentity;
         function zoom() {
+            eraseTrace();
             T = d3.event.transform;
             svg.attr("transform", T);
             svg.selectAll('circle').attr("transform", T);
