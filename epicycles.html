@@ -592,7 +592,7 @@
             var ii = +b.attr('id');
             p = heavenly_bodies[ii];
             dragstart_x = zoomInverseTransformX(d3.event.x) - p.attr('cx');
-            dragstart_y = zoomInverseTransformX(d3.event.y) - p.attr('cy');
+            dragstart_y = zoomInverseTransformY(d3.event.y) - p.attr('cy');
             // relative to initial planet center
         }
 
@@ -798,6 +798,7 @@
 
             upArrow = svg.append('text')
                 .text("⬆︎")
+                .attr('font-size', 20)
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
                 .attr('x', +planet.attr('cx'))
@@ -805,7 +806,8 @@
                 .attr('id', planet.attr('id'))
                 .attr('transform',T);
             downArrow = svg.append('text')
-                .text("⬆︎") // ⬇
+                .text("⬇")
+                .attr('font-size', 20)
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
                 .attr('x', +planet.attr('cx'))
