@@ -7,6 +7,7 @@
             margin:0;position:fixed;top:0;right:0;bottom:0;left:0;
             font-family: "Helvetica";
             font-size: 25px;
+            background-color: black;
         }
         input {
             font-family: "Helvetica";
@@ -24,7 +25,26 @@
         svg text::selection {
             background: none;
         }
-
+        .svg-container {
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            padding-bottom: 0%; /* aspect ratio */
+            vertical-align: top;
+            overflow: hidden;
+        }
+        .svg-content-responsive {
+            display: inline-block;
+            position: absolute;
+            top: 0px;
+            left: 0;
+        }
+        .button-div {
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            top: 75%;
+        }
     </style>
 </head>
 
@@ -67,8 +87,8 @@
 
         var TAU = 6.283185;
         
-        var svg_width = 1200;
-        var svg_height = 780;
+        var svg_width = 1000;
+        var svg_height = 1000;
 
         var nb_bodies = 3;
         var global_period = 6000;
@@ -77,16 +97,21 @@
 
         shouldDrawOrbit = false;
         shouldDrawTrace = true;
+        maxTraceSize = 50;
 
-        traceSpacing = 5;
+        traceSpacing = 3;
         traceSpacingCounter = 0;
 
         var body = d3.select("body");
         var svg = body.append("svg")
-            .attr("width", svg_width)
-            .attr("height",svg_height)
+            //.attr("width", svg_width)
+            //.attr("height",svg_height)
+            .classed("svg-container", true)
             .call(d3.zoom().on("zoom", zoom))
-            .on("dblclick.zoom", null);
+            .on("dblclick.zoom", null)
+            .attr("preserveAspectRatio", "xMinYMin meet")
+            .attr("viewBox", "0 0 " + svg_width + " " + svg_height)
+            .classed("svg-content-responsive", true);
 
         var backgroundRect = svg.append('rect')
             .attr('x',0)
@@ -254,8 +279,8 @@
             // CREATING PLANETS IN SVG AND IN ARRAY //
 
             heavenly_bodies = [];
-            var cx = svg_width/2;
-            var cy = svg_height/2;
+            var cx = 0.5 * svg_width;
+            var cy = 0.4 * svg_height;
             for (var i = 0; i < nb_bodies; i++) {
                   cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
                   cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
@@ -339,8 +364,8 @@
                 deselectPlanet();
                 document.getElementById('play_button').src = 'pause.png';
                 document.getElementById('play_button').width = '64px';
-                document.getElementById('add_planet_button').style = 'opacity: 0.3; width: 64px;';
-                document.getElementById('remove_planet_button').style = 'opacity: 0.3; width: 64px;';
+                document.getElementById('add_planet_button').style = 'opacity: 0.6; width: 64px;';
+                document.getElementById('remove_planet_button').style = 'opacity: 0.6; width: 64px;';
                 timer = d3.timer(play);
             } else {
                 timer.stop();
@@ -935,7 +960,7 @@
     </script>
 
     <br/>
-    <div style='text-align: center;'>
+    <div style='text-align: center;' class='button-div'>
         <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
         <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='plus.png'></img>
         <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='minus.png'></img>
