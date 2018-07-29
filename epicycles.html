@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
-    <script src="d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
     <style>
         body {
             margin:0;position:fixed;top:0;right:0;bottom:0;left:0;
@@ -21,9 +21,14 @@
             -webkit-moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            cursor: grab;
             font-size: 25px;
             font-family: "Helvetica";
+        }
+        svg .planet-label {
+            cursor: grab;
+        }
+        svg .incrementer {
+            cursor: pointer;
         }
         svg text::selection {
             background: none;
@@ -35,6 +40,7 @@
             padding-bottom: 0%; /* aspect ratio */
             vertical-align: top;
             overflow: hidden;
+            margin: auto;
         }
         .svg-content-responsive {
             display: inline-block;
@@ -44,9 +50,9 @@
         }
         .button-div {
             display: inline-block;
-            position: relative;
+            position: absolute;
             width: 100%;
-            top: 75%;
+            bottom: 25px;
         }
     </style>
 </head>
@@ -112,7 +118,7 @@
             .classed("svg-container", true)
             .call(d3.zoom().on("zoom", zoom))
             .on("dblclick.zoom", null)
-            .attr("preserveAspectRatio", "xMinYMin meet")
+            .attr("preserveAspectRatio", "xMinYMin slice")
             .attr("viewBox", "0 0 " + svg_width + " " + svg_height)
             .classed("svg-content-responsive", true);
 
@@ -303,6 +309,7 @@
             for (var i = 1; i < nb_bodies; i++) {
                 new_label = svg.append("text")
                 .text(orbital_frequencies[i])
+                .attr('class', 'planet-label')
                 .attr('fill', 'white')
                 .style('font-size', 1.6 * heavenly_bodies[i].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
@@ -806,6 +813,7 @@
 
             var new_label = svg.append("text")
                 .text(orbital_frequencies[nb_bodies - 1])
+                .attr('class', 'planet-label')
                 .attr('fill', 'white')
                 .style('font-size', 1.6 * heavenly_bodies[nb_bodies - 1].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
@@ -864,6 +872,7 @@
 
             upArrow = svg.append('text')
                 .text("⬆︎")
+                .attr('class', 'incrementer')
                 .style('font-size', planet.attr('r') + 'px')
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
@@ -873,6 +882,7 @@
                 .attr('transform',T);
             downArrow = svg.append('text')
                 .text("⬇")
+                .attr('class', 'incrementer')
                 .style('font-size', planet.attr('r') + 'px')
                 .attr('fill','white')
                 .attr('text-anchor', 'middle')
