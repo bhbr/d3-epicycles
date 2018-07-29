@@ -13,12 +13,15 @@
             font-family: "Helvetica";
             font-size: 25px;
         }
+        svg .planet {
+            cursor: grab;
+        }
         svg text {
             -webkit-user-select: none;
             -webkit-moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            cursor: default;
+            cursor: grab;
             font-size: 25px;
             font-family: "Helvetica";
         }
@@ -285,6 +288,7 @@
                   cx += orbital_radii[i] * Math.cos(orbital_phases[i]);
                   cy -= orbital_radii[i] * Math.sin(orbital_phases[i]);
                   var new_body = svg.append("circle")
+                  .attr('class', 'planet')
                   .attr("cx", cx)
                   .attr("cy", cy)
                   .attr("r", body_radii[i])
@@ -650,6 +654,7 @@
             dragstart_x = zoomInverseTransformX(d3.event.x) - p.attr('cx');
             dragstart_y = zoomInverseTransformY(d3.event.y) - p.attr('cy');
             // relative to initial planet center
+            b.style('cursor', 'grabbing');
         }
 
         function dragPlanet() {
@@ -691,9 +696,14 @@
             updateLinks();
         }
 
+        function dragEnd() {
+            d3.select(this).style('cursor','grab');
+        }
+
         var dragHandler = d3.drag()
             .on('start', anchorDragStart)
-            .on("drag", dragPlanet);
+            .on('drag', dragPlanet)
+            .on('end', dragEnd)
 
         dragHandler(d3.select("svg").selectAll("circle"));
         dragHandler(d3.select("svg").selectAll("text"));
@@ -743,12 +753,6 @@
             setupPlanets(nb_bodies);
             clearOrbit();
 
-            for (var i = 0; i < nb_bodies - 1; i++) {
-                heavenly_bodies[i]
-                    .attr("r", body_radii[i])
-                    .attr("fill", body_colors[i])
-                    .attr("id", ids[i])
-            }
             orbital_radii[nb_bodies - 1] = orbital_radii[nb_bodies - 2]/3;
             orbital_frequencies[nb_bodies - 1] = 1;
             orbital_periods[nb_bodies - 1] = global_period/orbital_frequencies[nb_bodies - 1];
@@ -790,6 +794,7 @@
             }
 
             var new_body = svg.append("circle")
+                .attr('class','planet')
                 .attr("cx", new_cx)
                 .attr("cy", new_cy)
                 .attr("r", body_radii[nb_bodies - 1])
