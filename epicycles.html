@@ -373,7 +373,7 @@
             shouldPlay = !shouldPlay;
             if (shouldPlay) {
                 deselectPlanet();
-                document.getElementById('play_button').src = 'pause.png';
+                document.getElementById('play_button').src = 'buttons/pause.png';
                 document.getElementById('play_button').width = '64px';
                 document.getElementById('add_planet_button').style = 'opacity: 0.6; width: 64px;';
                 document.getElementById('remove_planet_button').style = 'opacity: 0.6; width: 64px;';
@@ -381,7 +381,7 @@
             } else {
                 timer.stop();
                 timestamp += addedTime;
-                document.getElementById('play_button').src = 'play.png';
+                document.getElementById('play_button').src = 'buttons/play.png';
                 document.getElementById('play_button').width = '64px';
                 document.getElementById('add_planet_button').style = 'opacity: 1; width: 64px;';
                 document.getElementById('remove_planet_button').style = 'opacity: 1; width: 64px;';
@@ -392,8 +392,6 @@
         function play(t) {
 
             addedTime = t;
-            updateEpicycles();
-            updateLinks();
           
             var x = +heavenly_bodies[0].attr('cx');
             var y = +heavenly_bodies[0].attr('cy');
@@ -416,6 +414,8 @@
 
             }
             if (shouldDrawTrace) { updateTrace(); }
+            updateEpicycles();
+            updateLinks();
             fixHierarchy();
 
         }
@@ -472,13 +472,13 @@
             if (shouldShowEpicycles) {
                 shouldShowEpicycles = false;
                 shouldShowLinks = true;
-                document.getElementById('epicycles_button').src='links-on.png';
+                document.getElementById('epicycles_button').src='buttons/links-on.png';
             } else if (shouldShowLinks) {
                 shouldShowLinks = false;
-                document.getElementById('epicycles_button').src='planets.png';
+                document.getElementById('epicycles_button').src='buttons/planets.png';
             } else {
                 shouldShowEpicycles = true;
-                document.getElementById('epicycles_button').src='epicycles-on.png';
+                document.getElementById('epicycles_button').src='buttons/epicycles-on.png';
             }
 
             if (shouldShowEpicycles) {
@@ -638,12 +638,12 @@
             if (shouldDrawOrbit) {
                 eraseTrace();
                 drawOrbit(0);
-                document.getElementById('trace_button').src = 'show_orbit.png';
+                document.getElementById('trace_button').src = 'buttons/show_orbit.png';
             }
             if (shouldDrawTrace) {
                 orbit.remove();
                 updateTrace();
-                document.getElementById('trace_button').src = 'show_trace.png';
+                document.getElementById('trace_button').src = 'buttons/show_trace.png';
             }
         }
 
@@ -976,11 +976,11 @@
 
     <br/>
     <div style='text-align: center;' class='button-div'>
-        <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='play.png'></img>
-        <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='plus.png'></img>
-        <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='minus.png'></img>
-        <img onclick="toggleEpicyclesAndLinks();" id='epicycles_button' style='width: 64px;' src='epicycles-on.png'></img>
-        <img onclick="toggleTrace();" id='trace_button' style='width: 64px;' src='show_trace.png'></img>
+        <img onclick="togglePlay();" id='play_button' style='width: 64px;' src='buttons/play.png'></img>
+        <img onclick="addPlanet();" id='add_planet_button' style='width: 64px;' src='buttons/plus.png'></img>
+        <img onclick="removePlanet();" id='remove_planet_button' style='width: 64px;' src='buttons/minus.png'></img>
+        <img onclick="toggleEpicyclesAndLinks();" id='epicycles_button' style='width: 64px;' src='buttons/epicycles-on.png'></img>
+        <img onclick="toggleTrace();" id='trace_button' style='width: 64px;' src='buttons/show_trace.png'></img>
         <!--<input type="checkbox" name="venus" value="venus"
                value="show_venus" /><label for="venus"></label>-->
     </div>
