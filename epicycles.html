@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
-    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="d3.v4.min.js"></script>
     <style>
         body {
             margin:0;position:fixed;top:0;right:0;bottom:0;left:0;
             font-family: "Helvetica";
             font-size: 25px;
-            background-color: black;
+            background-color: grey;
         }
         input {
             font-family: "Helvetica";
@@ -60,6 +60,8 @@
 <body>
     <script>
 
+        var body = d3.select("body");
+
         function linspace(xmin,xmax,n) {
             if (n < 1) {
                 return [];
@@ -92,6 +94,21 @@
         }
 
 
+        function remove(obj) {
+            obj.remove();
+        }
+
+        function insert(parent,obj) {
+            parent.insert(function() { return obj.node(); });
+        }
+
+        function clone(obj) {
+            return obj.clone(true);
+        }
+
+
+
+
         // CONSTANTS //
 
         var TAU = 6.283185;
@@ -102,7 +119,7 @@
         var nb_bodies = 3;
         var global_period = 6000;
 
-        var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTrace, shouldDrawOrbit, orbit, upArrow, downArrow, venus_image, heavenly_bodies, planet_labels, epicycles, links, trace, trace_array, dragstart_x, dragstart_y;
+        var body_radii, body_colors, ids, orbital_radii, orbital_frequencies, orbital_periods, orbital_phases, shouldDrawTrace, shouldDrawOrbit, orbit, orbit_path, upArrow, downArrow, venus_image, heavenly_bodies, planet_labels, epicycles, links, trace, trace_array, dragstart_x, dragstart_y;
 
         shouldDrawOrbit = false;
         shouldDrawTrace = true;
@@ -111,10 +128,8 @@
         traceSpacing = 3;
         traceSpacingCounter = 0;
 
-        var body = d3.select("body");
+       
         var svg = body.append("svg")
-            //.attr("width", svg_width)
-            //.attr("height",svg_height)
             .classed("svg-container", true)
             .call(d3.zoom().on("zoom", zoom))
             .on("dblclick.zoom", null)
@@ -127,16 +142,53 @@
             .attr('y',0)
             .attr('width',svg_width)
             .attr('height',svg_height)
-            .attr('fill','black')
+            .attr('fill','url(#gradient0)')
             .attr('opacity',1)
             .attr('stroke','none');
 
         d3.select('svg').selectAll('rect').on('click', deselectPlanet);
 
 
+        var magnifier = body.append('svg')
+            .classed('magnifier', true)
+            .attr('width', 200)
+            .attr('height', 100)
+            .style('position','absolute')
+            .style('top','10px')
+            .style('left','10px');
+
+        var magnifierFrame = magnifier.append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', 200)
+            .attr('height', 100)
+            .attr('stroke','white')
+            .attr('stroke-width','2px');
+
+
         function defineGradients() {
 
             var defs = svg.append("defs");
+
+            var gradient0 = defs.append("linearGradient")
+               .attr("id", "gradient0")
+               .attr("x1", "50%")
+               .attr("x2", "50%")
+               .attr("y1", "0%")
+               .attr("y2", "100%");
+
+            gradient0.append("stop")
+               .attr('class', 'start')
+               .attr("offset", "0%")
+               .attr("stop-color", "#000")
+               .attr("stop-opacity", 1);
+
+            gradient0.append("stop")
+               .attr('class', 'end')
+               .attr("offset", "100%")
+               .attr("stop-color", "#222")
+               .attr("stop-opacity", 1);
+
 
             var gradient1 = defs.append("linearGradient")
                .attr("id", "gradient1")
@@ -281,9 +333,13 @@
             orbit = svg.append("path")
                 .attr("fill", "none")
                 .attr("stroke", "none");
+            orbit_path = svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "none");
         }
 
         function createSVGElements() {
+
 
             // CREATING PLANETS IN SVG AND IN ARRAY //
 
@@ -352,8 +408,11 @@
             fixHierarchy();
             
             // TRACES (TAILS) //
-            trace = svg.append("g");
+            trace = svg.append("g")
+                .attr('id', 'trace');
             trace_array = [];
+
+
 
         }
 
@@ -361,6 +420,27 @@
         setupOrbitalData(nb_bodies);
         clearOrbit();
         createSVGElements();
+
+        function pathToFit(t) {
+            phaseNumber = Math.floor(6 * t / global_period) % 6; // 0,1,2,3,4,5
+            alpha = (t % (global_period/6))/(global_period/6);
+            console.log(t,phaseNumber,alpha);
+            hexagonPoints = [
+                [1,0],
+                [0.5, Math.sqrt(3)/2],
+                [-0.5, Math.sqrt(3)/2],
+                [-1,0],
+                [-0.5, -Math.sqrt(3)/2],
+                [0.5, -Math.sqrt(3)/2],
+                [1,0]
+            ];
+            p0 = hexagonPoints[phaseNumber];
+            p1 = hexagonPoints[phaseNumber + 1];
+            x = 300 * (alpha * p1[0] + (1 - alpha) * p0[0]);
+            y = 300 * (alpha * p1[1] + (1 - alpha) * p0[1]);
+            return [x,y];
+        }
+
         
         // CREATING TIMER //
         var timestamp = 0;
@@ -429,6 +509,7 @@
             if (upArrow != undefined) { upArrow.raise(); }
             if (downArrowBox != undefined) { downArrowBox.raise(); }
             if (downArrow != undefined) { downArrow.raise(); }
+            orbit_path.raise();
         }
 
         var shouldShowEpicycles = true;
@@ -567,7 +648,7 @@
             var y = heavenly_bodies[nb_bodies - 1].attr('cy');
 
             var tracePoint = d3.select("svg")
-                .select("g")
+                .select("#trace")
                 .append("circle")
                 .attr("cx", x)
                 .attr("cy", y)
@@ -586,18 +667,16 @@
         updateTrace();
 
 
-        function drawOrbit(tt) {
+        function drawOrbit() {
 
             nb_steps = 1000;
             var dt = global_period/nb_steps;
-            var fwd_t = tt;
-            //var start_x = +heavenly_bodies[nb_bodies - 1].attr('cx');
-            //var start_y = +heavenly_bodies[nb_bodies - 1].attr('cy');
+            var fwd_t = 0;
             var x0 = +heavenly_bodies[0].attr('cx');
             var y0 = +heavenly_bodies[0].attr('cy');
             var counter = 0;
 
-            orbit_path_string = "";// "M" + start_x + " " + start_y;
+            orbit_path_string = "";
 
             while (counter < nb_steps) {
                 fwd_t += dt;
@@ -632,12 +711,51 @@
             fixHierarchy();
         }
 
+        function drawPath() {
+            nb_steps = 1000;
+            var dt = global_period/nb_steps;
+            var fwd_t = 0;
+            var x0 = +heavenly_bodies[0].attr('cx');
+            var y0 = +heavenly_bodies[0].attr('cy');
+            var counter = 0;
+
+            path_string = "";
+
+            while (counter < nb_steps) {
+                fwd_t += dt;
+                counter += 1;
+                p = pathToFit(fwd_t);
+                x = x0 + p[0];
+                y = y0 + p[1];
+
+                if (counter == 1) {
+                    path_string += "M";
+                } else {
+                    path_string += "L";
+                }
+                path_string += x + " " + y;
+            }
+            path_string += "Z";
+
+            orbit_path.remove();
+            orbit_path = svg.append('path')
+                .attr('id','pathToFit')
+                .attr("d", path_string)
+                .attr("fill", "none")
+                .attr("stroke", "yellow")
+                .attr('stroke-width', 2)
+                .attr("transform", svg.attr('transform')); 
+
+            fixHierarchy();
+        }
+        drawPath();
+
         function toggleTrace() {
             shouldDrawOrbit = !shouldDrawOrbit;
             shouldDrawTrace = !shouldDrawTrace;
             if (shouldDrawOrbit) {
                 eraseTrace();
-                drawOrbit(0);
+                drawOrbit();
                 document.getElementById('trace_button').src = 'buttons/show_orbit.png';
             }
             if (shouldDrawTrace) {
@@ -698,7 +816,7 @@
                     updateOrbitalDataForPlanet(i);
                 }
             }
-            if (shouldDrawOrbit) { drawOrbit(0); }
+            if (shouldDrawOrbit) { drawOrbit(); }
             updateEpicycles();
             updateLinks();
         }
@@ -728,7 +846,7 @@
             orbital_frequencies[ii]++;
             orbital_periods[ii] = global_period/orbital_frequencies[ii];
             planet_labels[ii-1].text(orbital_frequencies[ii]);
-            if (shouldDrawOrbit) { drawOrbit(0); }
+            if (shouldDrawOrbit) { drawOrbit(); }
         }
 
         function decrement_frequency() {
@@ -743,7 +861,7 @@
             orbital_frequencies[ii]--;
             orbital_periods[ii] = global_period/orbital_frequencies[ii];
             planet_labels[ii-1].text(orbital_frequencies[ii]);
-            if (shouldDrawOrbit) { drawOrbit(0); }
+            if (shouldDrawOrbit) { drawOrbit(); }
         }
 
         d3.select('svg').selectAll('circle').on("click", selectPlanet);
@@ -830,7 +948,7 @@
             new_label.on("click", selectPlanet);
 
             updateEpicycles();
-            if (shouldDrawOrbit) { drawOrbit(0); }
+            if (shouldDrawOrbit) { drawOrbit(); }
 
         }
     
@@ -850,7 +968,7 @@
             nb_bodies--;
             setupPlanets(nb_bodies);
             clearOrbit();
-            if (shouldDrawOrbit) { drawOrbit(0); }
+            if (shouldDrawOrbit) { drawOrbit(); }
         }
     
         var selectedPlanet;
