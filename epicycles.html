@@ -101,7 +101,7 @@
 
 
         function remove(obj) {
-            obj.remove();
+            if (obj != undefined) { obj.remove(); }
         }
 
         function insert(parent,obj) {
@@ -113,28 +113,34 @@
         }
 
 
+        function raise(obj) {
+            if (obj != undefined) { obj.raise(); }
+        }
+
 
 
         // GLOBAL VARIABLES //
         var TAU = 6.283185;
         
         var mainWidth = 1000;
-        var mainHeight = 1000;
-        var magnifierWidth = 150;
-        var magnifierHeight = 100;
+        var mainHeight = 500;
+        var magnifierWidth = 300;
+        var magnifierHeight = 200;
         var magnifierScale = 2;
 
         var nbPlanets = 3;
-        var globalPeriod = 60000;
+        var globalPeriod = 6000;
 
-        var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles;
+        var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceToFit, traceArray, traceToFitArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles;
 
         var shouldDrawOrbit = false;
-        var shouldDrawTrace = false;
+        var shouldDrawTrace = true;
         var maxTraceSize = 50;
 
         var traceSpacing = 3;
         var traceSpacingCounter = 0;
+        var residualSpacing = traceSpacing;
+        var residualSpacingCounter = 0;
 
         // CREATING TIMER //
         var timestamp = 0;
@@ -149,7 +155,7 @@
         var T = d3.zoomIdentity;
 
         function setupPlanetLooks(n) {
-            bodyRadii = [30];
+            bodyRadii = [20];
             for (var i = 0; i < 100; i++) {
                 bodyRadii.push(0.75 * bodyRadii[bodyRadii.length - 1]);
             }
@@ -164,7 +170,7 @@
         // orbit radii and phases
         function setupOrbitalData(n) {
             
-            orbitalRadii = linspace(300,70,nbPlanets);
+            orbitalRadii = linspace(200,40,nbPlanets);
             orbitalRadii[0] = 0;
 
             orbitalFrequencies = linspace(1, 3 * (nbPlanets - 1) + 1, nbPlanets);
@@ -350,7 +356,7 @@
         defineGradients();
 
         function clearOrbit() {
-            if (orbit != undefined) { remove(orbit); }
+            remove(orbit);
             orbit = mainFigure.append('path')
                 .attr('fill', 'none')
                 .attr('stroke', 'none');
@@ -373,8 +379,8 @@
 
             // first the planet we wish to fit
             planetToFit = mainFigure.append('circle')
-                  .attr('cx', cx + pathToFit(0)[0])
-                  .attr('cy', cy + pathToFit(0)[1])
+                  .attr('cx', cx + functionToFit(0)[0])
+                  .attr('cy', cy + functionToFit(0)[1])
                   .attr('r', 5)
                   .attr('fill', 'yellow')
                   .attr('id', 'planetToFit')
@@ -493,10 +499,13 @@
             trace = mainFigure.append('g')
                 .attr('id', 'trace');
             traceArray = [];
+            traceToFit = mainFigure.append('g')
+                .attr('id', 'traceToFit');
+            traceToFitArray = [];
         }
         createSVGElements();
 
-        function pathToFit(t) {
+        function functionToFit(t) {
             phaseNumber = Math.floor(6 * t / globalPeriod) % 6; // 0,1,2,3,4,5
             alpha = (t % (globalPeriod/6))/(globalPeriod/6);
             hexagonPoints = [
@@ -510,12 +519,10 @@
             ];
             p0 = hexagonPoints[phaseNumber];
             p1 = hexagonPoints[phaseNumber + 1];
-            x = 280 * (alpha * p1[0] + (1 - alpha) * p0[0]);
-            y = 280 * (alpha * p1[1] + (1 - alpha) * p0[1]);
+            x = 200 * (alpha * p1[0] + (1 - alpha) * p0[0]);
+            y = 200 * (alpha * p1[1] + (1 - alpha) * p0[1]);
             return [x,y];
-        }
-
-        
+        }        
 
         function togglePlay() {
             shouldPlay = !shouldPlay;
@@ -542,8 +549,8 @@
             addedTime = t; // keep a copy of t for safekeeping once we hit pause
             trueT = timestamp + t; // actual time in simulation
 
-            var planetToFitCX = +planets[0].attr('cx') + pathToFit(trueT)[0];
-            var planetToFitCY = +planets[0].attr('cy') + pathToFit(trueT)[1];
+            var planetToFitCX = +planets[0].attr('cx') + functionToFit(trueT)[0];
+            var planetToFitCY = +planets[0].attr('cy') + functionToFit(trueT)[1];
             planetToFit
                 .attr('cx', planetToFitCX)
                 .attr('cy', planetToFitCY);
@@ -556,7 +563,6 @@
                 var angle = trueT/orbitalPeriods[i] * TAU + orbitalPhases[i];
                 x += orbitalRadii[i] * Math.cos(angle);
                 y -= orbitalRadii[i] * Math.sin(angle);
-                console.log(x,y);
                 planets[i]
                     .attr('cx', x)
                     .attr('cy', y)
@@ -568,7 +574,6 @@
 
                 magnifierX = magnifierTransform(x,y)[0];
                 magnifierY = magnifierTransform(x,y)[1];
-                console.log(magnifierX,magnifierY);
                 magnifiedPlanets[i]
                     .attr('cx', magnifierX)
                     .attr('cy', magnifierY)
@@ -579,25 +584,45 @@
                     .raise();
             }
 
-            if (shouldDrawTrace) { updateTrace(); }
+            if (shouldDrawTrace) { updateTraces(); }
             updateEpicycles();
             updateLinks();
             fixHierarchy();
-            drawMagnifiedPathToFit();
+            drawMagnifiedOrbitToFit();
+
+            function drawResidual() {
+                x0 = +magnifiedPlanetToFit.attr('cx');
+                y0 = +magnifiedPlanetToFit.attr('cy');
+                x1 = +magnifiedPlanets[nbPlanets - 1].attr('cx');
+                y1 = +magnifiedPlanets[nbPlanets - 1].attr('cy');
+                magnifier.append('path')
+                    .attr('d', 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1)
+                    .attr('stroke', 'orange')
+                    .attr('stroke-width', 1)
+                    .attr('opacity', 0.5);
+
+            }
+            if (t < globalPeriod && residualSpacingCounter % residualSpacing == 0) {
+                //drawResidual();
+            }
+            residualSpacingCounter += 1;
         }
 
         function fixHierarchy() {
+            raise(orbit);
+            raise(orbitToFit);
+            raise(magnifiedOrbit);
+            raise(magnifiedOrbitToFit);
             for (var i = 0; i < nbPlanets; i++) {
-                planets[i].raise();
-                if (i != 0) { planetLabels[i-1].raise(); }
+                raise(planets[i]);
+                if (i != 0) { raise(planetLabels[i-1]); }
                 magnifiedPlanets[i].raise();
-                if (i != 0) { magnifiedPlanetLabels[i-1].raise(); }
+                if (i != 0) { raise(magnifiedPlanetLabels[i-1]); }
             }
-            if (upArrowBox != undefined) { upArrowBox.raise(); }
-            if (upArrow != undefined) { upArrow.raise(); }
-            if (downArrowBox != undefined) { downArrowBox.raise(); }
-            if (downArrow != undefined) { downArrow.raise(); }
-            orbit.raise();
+            raise(upArrow);
+            raise(downArrow);
+            raise(upArrowBox);
+            raise(downArrowBox);
         }
 
         function updateEpicycles() {
@@ -739,7 +764,7 @@
             }
         }
 
-        function updateTrace() {
+        function updateTraces() {
 
             traceSpacingCounter = (traceSpacingCounter + 1) % traceSpacing;
 
@@ -748,22 +773,37 @@
             var x = planets[nbPlanets - 1].attr('cx');
             var y = planets[nbPlanets - 1].attr('cy');
 
-            var tracePoint = d3.select('svg')
+            var tracePoint = mainFigure
                 .select('#trace')
                 .append('circle')
                 .attr('cx', x)
                 .attr('cy', y)
                 .attr('r', 2)
                 .attr('fill', 'white');
-                
             traceArray.push(tracePoint);
+
+            x = planetToFit.attr('cx');
+            y = planetToFit.attr('cy');
+            var traceToFitPoint = mainFigure
+                .select('#traceToFit')
+                .append('circle')
+                .attr('cx', x)
+                .attr('cy', y)
+                .attr('r', 2)
+                .attr('fill', 'yellow');
+            traceToFitArray.push(traceToFitPoint);
                 
             if (traceArray.length > 20) {
-                traceArray[0].remove();
+                remove(traceArray[0]);
                 traceArray.shift();
             }
+
+            if (traceToFitArray.length > 20) {
+                remove(traceToFitArray[0]);
+                traceToFitArray.shift();
+            }
         }
-        updateTrace();
+        updateTraces();
 
         function drawOrbit() {
 
@@ -797,7 +837,7 @@
             }
             orbitPathString += 'Z';
 
-            orbit.remove();
+            remove(orbit);
             orbit = mainFigure.append('path')
                 .attr('id','orbit')
                 .attr('d', orbitPathString)
@@ -809,7 +849,7 @@
             fixHierarchy();
         }
 
-        function drawPathToFit() {
+        function drawOrbitToFit() {
             nbSteps = 1000;
             var dt = globalPeriod/nbSteps;
             var fwd_t = 0;
@@ -822,7 +862,7 @@
             while (counter < nbSteps) {
                 fwd_t += dt;
                 counter += 1;
-                p = pathToFit(fwd_t);
+                p = functionToFit(fwd_t);
                 x = x0 + p[0];
                 y = y0 + p[1];
 
@@ -835,9 +875,9 @@
             }
             pathString += 'Z';
 
-            orbit.remove();
-            orbit = mainFigure.append('path')
-                .attr('id','pathToFit')
+            remove(orbitToFit);
+            orbitToFit = mainFigure.append('path')
+                .attr('id','orbitToFit')
                 .attr('d', pathString)
                 .attr('fill', 'none')
                 .attr('stroke', 'yellow')
@@ -847,9 +887,8 @@
 
             fixHierarchy();
         }
-        drawPathToFit();
 
-        function drawMagnifiedPathToFit() {
+        function drawMagnifiedOrbitToFit() {
             nbSteps = 1000;
             var dt = globalPeriod/nbSteps;
             var t = 0;
@@ -862,7 +901,7 @@
             while (counter < nbSteps) {
                 t += dt;
                 counter += 1;
-                p = pathToFit(t);
+                p = functionToFit(t);
                 x = x0 + p[0];
                 y = y0 + p[1];
 
@@ -877,36 +916,40 @@
             }
             magnifierPathString += 'Z';
 
-            magnifiedOrbit.remove();
+            remove(magnifiedOrbit);
             magnifiedOrbit = magnifier.append('path')
-                .attr('id','pathToFit')
+                .attr('id','orbitToFit')
                 .attr('d', magnifierPathString)
                 .attr('fill', 'none')
                 .attr('stroke', 'yellow')
                 .attr('stroke-width', 2);
         }
-        drawMagnifiedPathToFit();
+        drawMagnifiedOrbitToFit();
 
         function toggleTrace() {
             shouldDrawOrbit = !shouldDrawOrbit;
             shouldDrawTrace = !shouldDrawTrace;
             if (shouldDrawOrbit) {
-                eraseTrace();
+                eraseTraces();
                 drawOrbit();
+                drawOrbitToFit();
                 document.getElementById('trace_button').src = 'buttons/show_orbit.png';
             }
             if (shouldDrawTrace) {
-                orbit.remove();
-                updateTrace();
+                remove(orbit);
+                remove(orbitToFit);
+                updateTraces();
                 document.getElementById('trace_button').src = 'buttons/show_trace.png';
             }
         }
 
-        function eraseTrace() {
+        function eraseTraces() {
             for (var i = 0; i < traceArray.length; i++) {
-                traceArray[i].remove();
+                remove(traceArray[i]);
+                remove(traceToFitArray[i]);
             }
             traceArray = [];
+            traceToFitArray = [];
         }
 
 
@@ -925,7 +968,7 @@
             function dragPlanet() {
 
                 deselectPlanet();
-                eraseTrace();
+                eraseTraces();
                 addedTime = 0;
               
                 var b = d3.select(this); // the planet or label registering the drag
@@ -994,7 +1037,7 @@
 
                 function incrementFrequency() {
                     var ii;
-                    eraseTrace();
+                    eraseTraces();
                     var b = d3.select(this); // the clicked arrow
                     for (var i = 1; i < planets.length; i++) {
                         if (planetLabels[i - 1].attr('id') == b.attr('id')) {
@@ -1010,7 +1053,7 @@
 
                 function decrementFrequency() {
                     var ii;
-                    eraseTrace();
+                    eraseTraces();
                     var b = d3.select(this); // the clicked arrow
                     for (var i = 1; i < planets.length; i++) {
                         if (planetLabels[i - 1].attr('id') == b.attr('id')) {
@@ -1063,12 +1106,13 @@
             mainFigure.selectAll('circle').on('click', selectPlanet);
             mainFigure.selectAll('text').on('click', selectPlanet);
         }
+        makeFrequenciesEditable();
 
         function addPlanet() {
             if (shouldPlay) { return; }
 
             nbPlanets++;
-            eraseTrace();
+            eraseTraces();
             setupPlanetLooks(nbPlanets);
             clearOrbit();
 
@@ -1148,11 +1192,11 @@
         function removePlanet() {
             
             if (shouldPlay) { return; }
-            eraseTrace();
-            planets[nbPlanets - 1].remove();
-            planetLabels[nbPlanets - 2].remove();
-            epicycles[nbPlanets - 2].remove();
-            links[nbPlanets - 2].remove();
+            eraseTraces();
+            remove(planets[nbPlanets - 1]);
+            remove(planetLabels[nbPlanets - 2]);
+            remove(epicycles[nbPlanets - 2]);
+            remove(links[nbPlanets - 2]);
             planets.pop();
             planetLabels.pop();
             epicycles.pop();
@@ -1175,26 +1219,19 @@
                 }
                 selectedPlanet = undefined;
             }
-            if (upArrow != undefined) {
-                upArrow.remove();
-                upArrow = undefined;
-            }
-            if (downArrow != undefined) {
-                downArrow.remove();
-                downArrow = undefined;
-            }
-            if (upArrowBox != undefined) {
-                upArrowBox.remove();
-                upArrowBox = undefined;
-            }
-            if (downArrowBox != undefined) {
-                downArrowBox.remove();
-                downArrowBox = undefined;
-            }
+            remove(upArrow);
+            upArrow = undefined;
+            remove(downArrow);
+            downArrow = undefined;
+            remove(upArrowBox);
+            upArrowBox = undefined;
+            remove(downArrowBox);
+            downArrowBox = undefined;
+            
         }
 
         function zoom() {
-            eraseTrace();
+            eraseTraces();
             T = d3.event.transform;
             mainFigure.attr('transform', T);
             mainFigure.selectAll('circle').attr('transform', T);
