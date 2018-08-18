@@ -436,6 +436,11 @@
                     .attr('x', magnifiedCX)
                     .attr('y', magnifiedCY)
                 magnifiedPlanetLabels.push(magnifiedNewPlanetLabel);
+
+                residual = magnifier.append('path')
+                    .attr('stroke', 'orange')
+                    .attr('stroke-width', 1)
+                    .attr('opacity', 0.5);
             }
 
             // EPICYCLES //
@@ -590,20 +595,20 @@
             fixHierarchy();
             drawMagnifiedOrbitToFit();
 
-            function drawResidual() {
+            function updateResidual() {
                 x0 = +magnifiedPlanetToFit.attr('cx');
                 y0 = +magnifiedPlanetToFit.attr('cy');
                 x1 = +magnifiedPlanets[nbPlanets - 1].attr('cx');
                 y1 = +magnifiedPlanets[nbPlanets - 1].attr('cy');
-                magnifier.append('path')
-                    .attr('d', 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1)
-                    .attr('stroke', 'orange')
-                    .attr('stroke-width', 1)
-                    .attr('opacity', 0.5);
+
+                oldD = residual.attr('d');
+                if (oldD == undefined || oldD == null) { oldD = ''; }
+                newD = oldD + 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1;
+                residual.attr('d',newD);
 
             }
             if (t < globalPeriod && residualSpacingCounter % residualSpacing == 0) {
-                //drawResidual();
+                updateResidual();
             }
             residualSpacingCounter += 1;
         }
@@ -952,7 +957,6 @@
             traceToFitArray = [];
         }
 
-
         function makePlanetsDraggable() {
 
             function anchorDragStart() {
@@ -1227,7 +1231,6 @@
             upArrowBox = undefined;
             remove(downArrowBox);
             downArrowBox = undefined;
-            
         }
 
         function zoom() {
@@ -1238,6 +1241,18 @@
             mainFigure.selectAll('path').attr('transform', T);
             mainFigure.selectAll('g').attr('transform', T);
             mainFigure.selectAll('text').attr('transform', T);
+
+            zoomScale = +T.k;
+            magnifierScale *= zoomScale;
+            magT1 = 'translate(' + 0.5 * magnifierWidth + ',' + 0.5 * magnifierHeight + ') ';
+            magT2 = 'scale(' + zoomScale + ') ';
+            magT3 = 'translate(-' + 0.5 * magnifierWidth + ',-' + 0.5 * magnifierHeight + ')';
+            magT = magT1 + magT2 + magT3;
+            magnifier.attr('transform', magT);
+            magnifier.selectAll('circle').attr('transform', magT);
+            magnifier.selectAll('path').attr('transform', magT);
+            magnifier.selectAll('g').attr('transform', magT);
+            magnifier.selectAll('text').attr('transform', magT);
         }
 
         function zoomTransformX(x) {
