@@ -126,7 +126,8 @@
         var mainHeight = 500;
         var magnifierWidth = 300;
         var magnifierHeight = 200;
-        var magnifierScale = 2;
+        var originalMagnifierScale = 2;
+        var magnifierScale =  originalMagnifierScale;
 
         var nbPlanets = 3;
         var globalPeriod = 6000;
@@ -136,6 +137,8 @@
         var shouldDrawOrbit = false;
         var shouldDrawTrace = true;
         var maxTraceSize = 50;
+
+        var fontScale = 1.6;
 
         var traceSpacing = 3;
         var traceSpacingCounter = 0;
@@ -419,7 +422,7 @@
                     .text(orbitalFrequencies[i])
                     .attr('class', 'planet-label')
                     .attr('fill', 'white')
-                    .style('font-size', 1.6 * planets[i].attr('r') + 'px')
+                    .style('font-size', fontScale * planets[i].attr('r') + 'px')
                     .attr('text-anchor', 'middle')
                     .attr('alignment-baseline', 'central')
                     .attr('x', planets[i].attr('cx'))
@@ -430,7 +433,7 @@
                 magnifiedNewPlanetLabel = magnifier.append('text')
                     .text(orbitalFrequencies[i])
                     .attr('fill', 'white')
-                    .style('font-size', magnifierScale * 1.6 * planets[i].attr('r') + 'px')
+                    .style('font-size', magnifierScale * fontScale * planets[i].attr('r') + 'px')
                     .attr('text-anchor', 'middle')
                     .attr('alignment-baseline', 'central')
                     .attr('x', magnifiedCX)
@@ -981,40 +984,67 @@
                 dx = zoomInverseTransformX(d3.event.x) - dragstartX - draggedPlanet.attr('cx');
                 dy = zoomInverseTransformY(d3.event.y) - dragstartY - draggedPlanet.attr('cy');
 
-                for (var i = 0; i < planets.length; i++) {
-                    if (i >= ii) {
-                        planet = planets[i];
-                        magnifiedPlanet = magnifiedPlanets[i];
-                        oldCX = +planet.attr('cx');
-                        oldCY = +planet.attr('cy');
-                        var newCX = oldCX + dx;
-                        var newCY = oldCY + dy;
-                        var magNewCX = magnifierTransform(newCX,newCY)[0];
-                        var magNewCY = magnifierTransform(newCX,newCY)[1];
+                var planetScaler = 1;
 
-                        planet
-                            .attr('cx', newCX)
-                            .attr('cy', newCY);
-                        magnifiedPlanet
-                            .attr('cx', magNewCX)
-                            .attr('cy', magNewCY);
-                        if (i != 0) {
-                            label = planetLabels[i-1];
-                            magnifiedLabel = magnifiedPlanetLabels[i-1];
-                            label
-                                .attr('x', newCX)
-                                .attr('y', newCY);
-                            magnifiedLabel
-                                .attr('x', magNewCX)
-                                .attr('y', magNewCY);
-                        }
+                for (var i = ii; i < planets.length; i++) {
+                    
+                    var planet = planets[i];
+                    var magnifiedPlanet = magnifiedPlanets[i];
+                    var oldCX = +planet.attr('cx');
+                    var oldCY = +planet.attr('cy');
+                    var newCX = oldCX + dx;
+                    var newCY = oldCY + dy;
+                    var magNewCX = magnifierTransform(newCX,newCY)[0];
+                    var magNewCY = magnifierTransform(newCX,newCY)[1];
 
 
+                    planet
+                        .attr('cx', newCX)
+                        .attr('cy', newCY)
+                    magnifiedPlanet
+                        .attr('cx', magNewCX)
+                        .attr('cy', magNewCY);
+
+
+                    if (i != 0) {
+                        var label = planetLabels[i - 1];
+                        var magnifiedLabel = magnifiedPlanetLabels[i - 1];
+                        label
+                            .attr('x', newCX)
+                            .attr('y', newCY);
+                        magnifiedLabel
+                            .attr('x', magNewCX)
+                            .attr('y', magNewCY);
                     }
+                    
                     if (i != 0) {
                         updateOrbitalDataForPlanet(i);
                     }
+                    
+
                 }
+
+                if (ii != 0) {
+                    var grabbedPlanet = planets[ii];
+                    var parentPlanet = planets[ii - 1];
+                    var ddx = +grabbedPlanet.attr('cx') - parentPlanet.attr('cx');
+                    var ddy = +grabbedPlanet.attr('cy') - parentPlanet.attr('cy');
+                    var linkLength = Math.sqrt(ddx**2 + ddy**2);
+                    var r1 = +bodyRadii[ii];
+                    var r2 = +bodyRadii[ii - 1];
+                    var planetScaler = Math.min(1, 0.7 * linkLength / (r1 + r2));
+
+                    for (var i = ii - 1; i < nbPlanets; i++) {
+                        planets[i].attr('r', +bodyRadii[i] * planetScaler);
+                        magnifiedPlanets[i].attr('r', +bodyRadii[i] * planetScaler * magnifierScale);
+                    }
+                    for (var i = Math.max(0,ii - 2); i < nbPlanets - 1; i++) {
+                        planetLabels[i].style('font-size', +planets[i + 1].attr('r') * fontScale);
+                        magnifiedPlanetLabels[i].style('font-size', +magnifiedPlanets[i + 1].attr('r') * fontScale);
+                    }
+
+                }
+
                 if (shouldDrawOrbit) { drawOrbit(); }
                 updateEpicycles();
                 updateLinks();
@@ -1175,7 +1205,7 @@
                 .text(orbitalFrequencies[nbPlanets - 1])
                 .attr('class', 'planet-label')
                 .attr('fill', 'white')
-                .style('font-size', 1.6 * planets[nbPlanets - 1].attr('r') + 'px')
+                .style('font-size', fontScale * planets[nbPlanets - 1].attr('r') + 'px')
                 .attr('text-anchor', 'middle')
                 .attr('alignment-baseline', 'central')
                 .attr('x', planets[nbPlanets - 1].attr('cx'))
@@ -1243,7 +1273,6 @@
             mainFigure.selectAll('text').attr('transform', T);
 
             zoomScale = +T.k;
-            magnifierScale *= zoomScale;
             magT1 = 'translate(' + 0.5 * magnifierWidth + ',' + 0.5 * magnifierHeight + ') ';
             magT2 = 'scale(' + zoomScale + ') ';
             magT3 = 'translate(-' + 0.5 * magnifierWidth + ',-' + 0.5 * magnifierHeight + ')';
@@ -1254,6 +1283,7 @@
             magnifier.selectAll('g').attr('transform', magT);
             magnifier.selectAll('text').attr('transform', magT);
         }
+
 
         function zoomTransformX(x) {
             return T.k * x + T.x;
