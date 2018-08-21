@@ -126,11 +126,11 @@
         var mainHeight = 500;
         var magnifierWidth = 300;
         var magnifierHeight = 200;
-        var originalMagnifierScale = 2;
+        var originalMagnifierScale = 1;
         var magnifierScale =  originalMagnifierScale;
 
         var nbPlanets = 3;
-        var globalPeriod = 6000;
+        var globalPeriod = 24000;
 
         var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceToFit, traceArray, traceToFitArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles;
 
@@ -140,11 +140,12 @@
 
         var fontScale = 1.6;
 
-        var traceSpacing = 3;
+        var traceSpacing = 1;
         var traceSpacingCounter = 0;
         var residualSpacing = traceSpacing;
         var residualSpacingCounter = 0;
         var radiusBufferRatio = 0.7;
+        var opacityFactor = 5e4;
 
         // CREATING TIMER //
         var timestamp = 0;
@@ -441,10 +442,6 @@
                     .attr('y', magnifiedCY)
                 magnifiedPlanetLabels.push(magnifiedNewPlanetLabel);
 
-                residual = magnifier.append('path')
-                    .attr('stroke', 'orange')
-                    .attr('stroke-width', 1)
-                    .attr('opacity', 0.5);
             }
 
             // EPICYCLES //
@@ -511,6 +508,11 @@
             traceToFit = mainFigure.append('g')
                 .attr('id', 'traceToFit');
             traceToFitArray = [];
+
+            residual = magnifier.append('g');
+            residualBorder = magnifier.append('path')
+                .attr('stroke', 'orange')
+                .attr('stroke-width', 1);
         }
         createSVGElements();
 
@@ -553,6 +555,8 @@
             }
         }
         
+        var previousX;
+        var previousY;
         function play(t) {
 
             addedTime = t; // keep a copy of t for safekeeping once we hit pause
@@ -600,21 +604,45 @@
             drawMagnifiedOrbitToFit();
 
             function updateResidual() {
-                x0 = +magnifiedPlanetToFit.attr('cx');
-                y0 = +magnifiedPlanetToFit.attr('cy');
-                x1 = +magnifiedPlanets[nbPlanets - 1].attr('cx');
-                y1 = +magnifiedPlanets[nbPlanets - 1].attr('cy');
+                var x0 = +magnifiedPlanetToFit.attr('cx');
+                var y0 = +magnifiedPlanetToFit.attr('cy');
+                var x1 = +magnifiedPlanets[nbPlanets - 1].attr('cx');
+                var y1 = +magnifiedPlanets[nbPlanets - 1].attr('cy');
+                var x2 = previousX;
+                var y2 = previousY;
 
-                oldD = residual.attr('d');
-                if (oldD == undefined || oldD == null) { oldD = ''; }
-                newD = oldD + 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1;
-                residual.attr('d',newD);
+                if (previousX == undefined && previousY == undefined) { return; }
+
+                var triangleString = 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2 + 'L' + x0 + ' ' + y0 + 'Z';
+                if (residualBorder.attr('d') == undefined) {
+                    residualBorder.attr('d', 'M' + x1 + ' ' + y1);
+                } else {
+                    var borderString = residualBorder.attr('d');
+                    borderString += 'L' + x1 + ' ' + y1;
+                    residualBorder.attr('d', borderString);
+                }
+                r1 = [x1 - x0, y1 - y0];
+                r2 = [x2 - x0, y2 - y0];
+                var area = 0.5 * Math.abs(r1[0] * r2[1] - r1[1] * r2[0]);
+                var r = (Math.sqrt(r1[0]**2 + r1[1]**2) + Math.sqrt(r2[0]**2 + r2[1]**2))/2;
+                var triangleOpacity = 0.2; // opacityFactor/(area * r**2);
+
+                residual.append('path')
+                    .attr('d', triangleString)
+                    .attr('fill', 'orange')
+                    .attr('stroke-width', 0)
+                    .attr('opacity', triangleOpacity);
+
+
 
             }
-            if (t < globalPeriod && residualSpacingCounter % residualSpacing == 0) {
+            if (trueT <= globalPeriod && residualSpacingCounter % residualSpacing == 0) {
                 updateResidual();
             }
             residualSpacingCounter += 1;
+            previousX = +magnifiedPlanets[nbPlanets - 1].attr('cx');
+            previousY = +magnifiedPlanets[nbPlanets - 1].attr('cy');
+
         }
 
         function fixHierarchy() {
