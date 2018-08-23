@@ -130,7 +130,7 @@
         var magnifierScale =  originalMagnifierScale;
 
         var nbPlanets = 3;
-        var globalPeriod = 24000;
+        var globalPeriod = 12000;
 
         var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceToFit, traceArray, traceToFitArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles;
 
@@ -140,7 +140,7 @@
 
         var fontScale = 1.6;
 
-        var traceSpacing = 5;
+        var traceSpacing = 2;
         var traceSpacingCounter = 0;
         var residualSpacing = traceSpacing;
         var residualSpacingCounter = 0;
@@ -559,6 +559,7 @@
         }
         
         var previousX, previousY, nextX, nextY;
+        var doneDrawingResidual = false;
         function play(t) {
 
             addedTime = t; // keep a copy of t for safekeeping once we hit pause
@@ -579,7 +580,6 @@
             for (var i = 1; i < nbPlanets; i++) {
 
                 var angle = trueT/orbitalPeriods[i] * TAU + orbitalPhases[i];
-                console.log(orbitalPhases[i]);
                 x += orbitalRadii[i] * Math.cos(angle);
                 y -= orbitalRadii[i] * Math.sin(angle);
                 planets[i]
@@ -636,8 +636,15 @@
                     .attr('opacity', triangleOpacity);
 
             }
-            if (trueT <= globalPeriod && residualSpacingCounter % residualSpacing == 0) {
+            if (trueT < globalPeriod && residualSpacingCounter % residualSpacing == 0) {
                 updateResidual();
+            }
+            if (trueT >= globalPeriod && !doneDrawingResidual) {
+                updateResidual();
+                var borderString = residualBorder.attr('d');
+                borderString += 'Z';
+                residualBorder.attr('d', borderString);
+                doneDrawingResidual = true;
             }
             residualSpacingCounter += 1;
             previousX = nextX;
