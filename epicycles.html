@@ -140,12 +140,12 @@
 
         var fontScale = 1.6;
 
-        var traceSpacing = 1;
+        var traceSpacing = 5;
         var traceSpacingCounter = 0;
         var residualSpacing = traceSpacing;
         var residualSpacingCounter = 0;
         var radiusBufferRatio = 0.7;
-        var opacityFactor = 5e4;
+        var opacityFactor = 0.005;
 
         // CREATING TIMER //
         var timestamp = 0;
@@ -512,7 +512,9 @@
             residual = magnifier.append('g');
             residualBorder = magnifier.append('path')
                 .attr('stroke', 'orange')
-                .attr('stroke-width', 1);
+                .attr('fill', 'none')
+                .style('stroke-opacity', 0.5)
+                .style('stroke-width', 1);
         }
         createSVGElements();
 
@@ -555,12 +557,14 @@
             }
         }
         
-        var previousX;
-        var previousY;
+        var previousX, previousY, nextX, nextY;
         function play(t) {
 
             addedTime = t; // keep a copy of t for safekeeping once we hit pause
             trueT = timestamp + t; // actual time in simulation
+
+            var residualCenterX = magnifierWidth/2;
+            var residualCenterY = magnifierHeight/2;
 
             var planetToFitCX = +planets[0].attr('cx') + functionToFit(trueT)[0];
             var planetToFitCY = +planets[0].attr('cy') + functionToFit(trueT)[1];
@@ -603,29 +607,28 @@
             fixHierarchy();
             drawMagnifiedOrbitToFit();
 
+            var x0 = +magnifiedPlanetToFit.attr('cx');
+            var y0 = +magnifiedPlanetToFit.attr('cy');
+
             function updateResidual() {
-                var x0 = +magnifiedPlanetToFit.attr('cx');
-                var y0 = +magnifiedPlanetToFit.attr('cy');
-                var x1 = +magnifiedPlanets[nbPlanets - 1].attr('cx');
-                var y1 = +magnifiedPlanets[nbPlanets - 1].attr('cy');
-                var x2 = previousX;
-                var y2 = previousY;
+                nextX = +magnifiedPlanets[nbPlanets - 1].attr('cx');
+                nextY = +magnifiedPlanets[nbPlanets - 1].attr('cy');
 
                 if (previousX == undefined && previousY == undefined) { return; }
 
-                var triangleString = 'M' + x0 + ' ' + y0 + 'L' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2 + 'L' + x0 + ' ' + y0 + 'Z';
+                var triangleString = 'M' + residualCenterX + ' ' + residualCenterY + 'L' + previousX + ' ' + previousY + 'L' + nextX + ' ' + nextY + 'L' + residualCenterX + ' ' + residualCenterY + 'Z';
                 if (residualBorder.attr('d') == undefined) {
-                    residualBorder.attr('d', 'M' + x1 + ' ' + y1);
+                    residualBorder.attr('d', 'M' + previousX + ' ' + previousY);
                 } else {
                     var borderString = residualBorder.attr('d');
-                    borderString += 'L' + x1 + ' ' + y1;
+                    borderString += 'L' + nextX + ' ' + nextY;
                     residualBorder.attr('d', borderString);
                 }
-                r1 = [x1 - x0, y1 - y0];
-                r2 = [x2 - x0, y2 - y0];
+                var r1 = [previousX - residualCenterX, previousY - residualCenterY];
+                var r2 = [nextX - residualCenterX, nextY - residualCenterY];
                 var area = 0.5 * Math.abs(r1[0] * r2[1] - r1[1] * r2[0]);
                 var r = (Math.sqrt(r1[0]**2 + r1[1]**2) + Math.sqrt(r2[0]**2 + r2[1]**2))/2;
-                var triangleOpacity = 0.2; // opacityFactor/(area * r**2);
+                var triangleOpacity = opacityFactor * r**2 / area;
 
                 residual.append('path')
                     .attr('d', triangleString)
@@ -640,8 +643,8 @@
                 updateResidual();
             }
             residualSpacingCounter += 1;
-            previousX = +magnifiedPlanets[nbPlanets - 1].attr('cx');
-            previousY = +magnifiedPlanets[nbPlanets - 1].attr('cy');
+            previousX = nextX;
+            previousY = nextY;
 
         }
 
