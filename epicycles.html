@@ -150,6 +150,7 @@
         // CREATING TIMER //
         var timestamp = 0;
         var addedTime = 0; // time shift incremented whenever stopping
+        var trueT = 0;
         var timer = d3.timer(play)
              .stop();
         var shouldPlay = false;
@@ -571,13 +572,14 @@
             planetToFit
                 .attr('cx', planetToFitCX)
                 .attr('cy', planetToFitCY);
-          
+            
             var x = +planets[0].attr('cx');
             var y = +planets[0].attr('cy');
 
             for (var i = 1; i < nbPlanets; i++) {
 
                 var angle = trueT/orbitalPeriods[i] * TAU + orbitalPhases[i];
+                console.log(orbitalPhases[i]);
                 x += orbitalRadii[i] * Math.cos(angle);
                 y -= orbitalRadii[i] * Math.sin(angle);
                 planets[i]
@@ -607,9 +609,6 @@
             fixHierarchy();
             drawMagnifiedOrbitToFit();
 
-            var x0 = +magnifiedPlanetToFit.attr('cx');
-            var y0 = +magnifiedPlanetToFit.attr('cy');
-
             function updateResidual() {
                 nextX = +magnifiedPlanets[nbPlanets - 1].attr('cx');
                 nextY = +magnifiedPlanets[nbPlanets - 1].attr('cy');
@@ -635,8 +634,6 @@
                     .attr('fill', 'orange')
                     .attr('stroke-width', 0)
                     .attr('opacity', triangleOpacity);
-
-
 
             }
             if (trueT <= globalPeriod && residualSpacingCounter % residualSpacing == 0) {
@@ -686,7 +683,7 @@
                     .attr('r', magnifierScale * orbitalRadii[i])
                     .raise();
 
-                var angle = (addedTime)/orbitalPeriods[i] * TAU + orbitalPhases[i];
+                var angle = trueT/orbitalPeriods[i] * TAU + orbitalPhases[i];
                 cx += orbitalRadii[i] * Math.cos(angle);
                 cy -= orbitalRadii[i] * Math.sin(angle);
 
@@ -792,10 +789,10 @@
         function updateOrbitalDataForPlanet(i) {
             var ddx = +planets[i].attr('cx') - planets[i-1].attr('cx');
             var ddy = +planets[i].attr('cy') - planets[i-1].attr('cy');
-            r = (ddx**2 + ddy**2) ** 0.5;
-            phi = Math.atan2(-ddy, ddx);
-            orbitalRadii[i] = r;
-            orbitalPhases[i] = phi;
+            var rr = (ddx**2 + ddy**2) ** 0.5;
+            //var phi = Math.atan2(-ddy, ddx);
+            orbitalRadii[i] = rr;
+            //orbitalPhases[i] = phi;
         }
 
         function updateOrbitalData() {
@@ -926,7 +923,7 @@
 
             fixHierarchy();
         }
-        drawOrbitToFit();
+        //drawOrbitToFit();
 
         function drawMagnifiedOrbitToFit() {
             nbSteps = 1000;
