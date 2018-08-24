@@ -126,8 +126,8 @@
         var mainHeight = 500;
         var magnifierWidth = 300;
         var magnifierHeight = 200;
-        var originalMagnifierScale = 1;
-        var magnifierScale =  originalMagnifierScale;
+        var originalMagnification = 1;
+        var magnification = originalMagnification;
 
         var nbPlanets = 3;
         var globalPeriod = 12000;
@@ -199,7 +199,7 @@
                 .classed('svg-content-responsive', true)
                 .attr('preserveAspectRatio', 'xMinYMin slice')
                 .attr('viewBox', '0 0 ' + mainWidth + ' ' + mainHeight)
-                .call(d3.zoom().on('zoom', zoom))
+                .call(d3.zoom().on('zoom', mainFigureZoom))
                 .on('dblclick.zoom', null);
 
             backgroundRect = mainFigure.append('rect')
@@ -215,7 +215,9 @@
             magnifier = body.append('svg')
                 .classed('magnifier', true)
                 .attr('width', magnifierWidth)
-                .attr('height', magnifierHeight);
+                .attr('height', magnifierHeight)
+                .call(d3.zoom().on('zoom', magnifierZoom))
+                .on('dblclick.zoom', null);
 
             magnifierFrame = magnifier.append('rect')
                 .attr('x', 0)
@@ -230,7 +232,7 @@
             magnifiedPlanetToFit = magnifier.append('circle')
                 .attr('cx', 0.5 * magnifierWidth)
                 .attr('cy', 0.5 * magnifierHeight)
-                .attr('r', magnifierScale * 5)
+                .attr('r', magnification * 5)
                 .attr('fill', 'yellow')
                 .attr('id', 'magnifiedPlanetToFit')
                 .attr('stroke-width', 0);
@@ -413,7 +415,7 @@
                 var magnifiedNewPlanet = magnifier.append('circle')
                     .attr('cx', magnifiedCX)
                     .attr('cy', magnifiedCY)
-                    .attr('r', magnifierScale * bodyRadii[i])
+                    .attr('r', magnification * bodyRadii[i])
                     .attr('fill', bodyColors[i])
                     .attr('stroke-width', 0);
                 magnifiedPlanets.push(magnifiedNewPlanet);
@@ -436,7 +438,7 @@
                 magnifiedNewPlanetLabel = magnifier.append('text')
                     .text(orbitalFrequencies[i])
                     .attr('fill', 'white')
-                    .style('font-size', magnifierScale * fontScale * planets[i].attr('r') + 'px')
+                    .style('font-size', magnification * fontScale * planets[i].attr('r') + 'px')
                     .attr('text-anchor', 'middle')
                     .attr('alignment-baseline', 'central')
                     .attr('x', magnifiedCX)
@@ -465,7 +467,7 @@
                 var magnifiedNewEpicycle = magnifier.append('circle')
                     .attr('cx', magCX)
                     .attr('cy', magCY)
-                    .attr('r', magnifierScale * orbitalRadii[i])
+                    .attr('r', magnification * orbitalRadii[i])
                     .attr('fill', 'none')
                     .attr('stroke', 'gray')
                     .attr('stroke-width', 2)
@@ -687,7 +689,7 @@
                 magnifiedEpicycles[i - 1]
                     .attr('cx', magCX)
                     .attr('cy', magCY)
-                    .attr('r', magnifierScale * orbitalRadii[i])
+                    .attr('r', magnification * orbitalRadii[i])
                     .raise();
 
                 var angle = trueT/orbitalPeriods[i] * TAU + orbitalPhases[i];
@@ -1072,7 +1074,7 @@
 
                     for (var i = ii - 1; i < nbPlanets; i++) {
                         planets[i].attr('r', +bodyRadii[i] * planetScaler);
-                        magnifiedPlanets[i].attr('r', +bodyRadii[i] * planetScaler * magnifierScale);
+                        magnifiedPlanets[i].attr('r', +bodyRadii[i] * planetScaler * magnification);
                     }
                     for (var i = Math.max(0,ii - 2); i < nbPlanets - 1; i++) {
                         planetLabels[i].style('font-size', +planets[i + 1].attr('r') * fontScale);
@@ -1284,7 +1286,7 @@
                 .attr('class','magnified-planet')
                 .attr('cx', magnifiedNewCX)
                 .attr('cy', magnifiedNewCY)
-                .attr('r', bodyRadii[nbPlanets - 1] * magnifierScale)
+                .attr('r', bodyRadii[nbPlanets - 1] * magnification)
                 .attr('fill', bodyColors[nbPlanets - 1])
                 .attr('id', planetIDs[nbPlanets - 1])
                 .attr('stroke', 'none');
@@ -1352,7 +1354,7 @@
             downArrowBox = undefined;
         }
 
-        function zoom() {
+        function mainFigureZoom() {
             eraseTraces();
             T = d3.event.transform;
             mainFigure.attr('transform', T);
@@ -1360,17 +1362,29 @@
             mainFigure.selectAll('path').attr('transform', T);
             mainFigure.selectAll('g').attr('transform', T);
             mainFigure.selectAll('text').attr('transform', T);
+            adjustMagnifier(magnification);
+        }
 
-            zoomScale = +T.k;
-            magT1 = 'translate(' + 0.5 * magnifierWidth + ',' + 0.5 * magnifierHeight + ') ';
-            magT2 = 'scale(' + zoomScale + ') ';
-            magT3 = 'translate(-' + 0.5 * magnifierWidth + ',-' + 0.5 * magnifierHeight + ')';
-            magT = magT1 + magT2 + magT3;
+
+        function adjustMagnifier(newMagnification) {
+            var newScale = +T.k * newMagnification;
+            var magT1 = 'translate(' + 0.5 * magnifierWidth + ',' + 0.5 * magnifierHeight + ') ';
+            var magT2 = 'scale(' + newScale + ') ';
+            var magT3 = 'translate(-' + 0.5 * magnifierWidth + ',-' + 0.5 * magnifierHeight + ')';
+            var magT = magT1 + magT2 + magT3;
             magnifier.attr('transform', magT);
             magnifier.selectAll('circle').attr('transform', magT);
             magnifier.selectAll('path').attr('transform', magT);
             magnifier.selectAll('g').attr('transform', magT);
             magnifier.selectAll('text').attr('transform', magT);
+
+        }
+
+        var magTraw;
+        function magnifierZoom() {
+            magTraw = d3.event.transform;
+            magnification = Math.max(+magTraw.k * originalMagnification, originalMagnification);
+            adjustMagnifier(magnification);
         }
 
 
@@ -1395,8 +1409,8 @@
             var y0 = +planetToFit.attr('cy');
             var x1 = magnifierWidth/2;
             var y1 = magnifierHeight/2;
-            transformedX = x1 + magnifierScale * (x - x0);
-            transformedY = y1 + magnifierScale * (y - y0);
+            transformedX = x1 + magnification * (x - x0);
+            transformedY = y1 + magnification * (y - y0);
             return [transformedX, transformedY];
         }
 
@@ -1406,7 +1420,7 @@
             var x1 = magnifierWidth/2;
             var y1 = magnifierHeight/2;
             T1 = 'translate(-' + x0 + ',-' + y0 + ')';
-            T2 = 'scale(' + magnifierScale + ')';
+            T2 = 'scale(' + magnification + ')';
             T1 = 'translate(' + x1 + ',' + y1 + ')';
             return T3 + T2 + T1;
         }
