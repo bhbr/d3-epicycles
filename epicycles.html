@@ -132,7 +132,7 @@
         var nbPlanets = 3;
         var globalPeriod = 12000;
 
-        var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceToFit, traceArray, traceToFitArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles;
+        var bodyRadii, bodyColors, planetIDs, orbitalRadii, orbitalFrequencies, orbitalPeriods, orbitalPhases, shouldDrawTrace, shouldDrawOrbit, orbit, orbitToFit, upArrow, downArrow, venusImage, planets, planetLabels, epicycles, links, trace, traceToFit, traceArray, traceToFitArray, dragstartX, dragstartY, planetToFit, magnifiedOrbit, magnifiedOrbitToFit, mainFigure, backgroundRect, magnifier, magnifierFrame,selectedPlanet, upArrowBox, downArrowBox, magnifiedEpicycles, residualLabel;
 
         var shouldDrawOrbit = false;
         var shouldDrawTrace = true;
@@ -518,6 +518,15 @@
                 .attr('fill', 'none')
                 .style('stroke-opacity', 0.5)
                 .style('stroke-width', 1);
+
+            residualLabel = magnifier.append('text')
+                .text(computedResidual())
+                .style('font-size', '20px')
+                .attr('fill','white')
+                .attr('text-anchor', 'middle')
+                .attr('x', magnifierWidth/2)
+                .attr('y', magnifierHeight - 30);
+
         }
         createSVGElements();
 
@@ -611,7 +620,7 @@
             fixHierarchy();
             drawMagnifiedOrbitToFit();
 
-            function updateResidual() {
+            function updateResidualDrawing() {
                 nextX = +magnifiedPlanets[nbPlanets - 1].attr('cx');
                 nextY = +magnifiedPlanets[nbPlanets - 1].attr('cy');
 
@@ -639,10 +648,10 @@
 
             }
             if (trueT < globalPeriod && residualSpacingCounter % residualSpacing == 0) {
-                updateResidual();
+                updateResidualDrawing();
             }
             if (trueT >= globalPeriod && !doneDrawingResidual) {
-                updateResidual();
+                updateResidualDrawing();
                 var borderString = residualBorder.attr('d');
                 borderString += 'Z';
                 residualBorder.attr('d', borderString);
@@ -652,6 +661,39 @@
             previousX = nextX;
             previousY = nextY;
 
+        }
+
+        function computedResidual() {
+            var sum = 0;
+            var dt = globalPeriod / 20;
+            var planetX, planetY, toFitX, toFitY;
+            for (var tt = 0; tt < globalPeriod; tt += dt) {
+                var p = functionToFit(tt);
+                toFitX = p[0];
+                toFitY = p[1];
+                var q = outermostPlanetPosition(tt);
+                planetX = q[0];
+                planetY = q[1];
+                var r2 = (planetX - toFitX)**2 + (planetY - toFitY)**2;
+                sum += r2;
+            }
+            sum *= dt;
+            return sum;
+        }
+
+        function updateResidualLabel() {
+            residualLabel.text(computedResidual());
+        }
+
+        function outermostPlanetPosition(time) {
+            var x = +planets[0].attr('cx');
+            var y = +planets[0].attr('cy');
+            for (var i = 1; i < nbPlanets; i++) {
+                var angle = time/globalPeriod * TAU + orbitalPhases[i];
+                x += +planets[i].attr('r') * Math.cos(angle);
+                y -= +planets[i].attr('r') * Math.sin(angle);
+            }
+            return [x,y];
         }
 
         function fixHierarchy() {
@@ -1086,6 +1128,7 @@
                 if (shouldDrawOrbit) { drawOrbit(); }
                 updateEpicycles();
                 updateLinks();
+                updateResidualLabel();
             }
 
 
